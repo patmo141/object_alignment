@@ -359,72 +359,55 @@ class OBJECT_OT_align_pick_points(bpy.types.Operator):
     def invoke(self, context, event):
         self.modal_state = 'WAITING'
         
-        n = len(bpy.data.window_managers[0].windows)
-        bpy.ops.wm.window_duplicate()
+        n = len(context.window_manager.windows)
         
-        #assume windows don't change order :-)
-        window = bpy.data.window_managers[0].windows[n]
-        screen = window.screen
-        areas = [area.as_pointer() for area in screen.areas]
-        for area in screen.areas:
-            if area.type == 'VIEW_3D':
-                for region in area.regions:
-                    if region.type == 'WINDOW':
-                        break
-                    
-                for space in area.spaces:
-                    if space.type == 'VIEW_3D':
-                        break
-                    
-                break
+        windows = [window.as_pointer() for window in context.window_manager.windows]
+        print('There are this many windows %i' % len(context.window_manager.windows))
+        #pop up a new 3d view area.
+        #Pray for now the user is in a 3d view
+        bpy.ops.screen.area_dupli('INVOKE_DEFAULT')
+        
+        print('Now there are this many windows %i' % len(context.window_manager.windows))
+        
+        for window in context.window_manager.windows:
+            if window.as_pointer() not in windows:
+                print('found the new window')
+                print('it is %i wide and %i tall' % (window.width, window.height))
+                screen = window.screen
+        
+                #keep track of exisiting areas, because we will make a new one
+                #areas = [area.as_pointer() for area in screen.areas]    
+                for area in screen.areas:
+                    print('area type: %s' % area.type)
+                    if area.type == 'VIEW_3D':
                         
+                        for region in area.regions:
+                            print('region type: %s' % region.type)
+                            if region.type == 'WINDOW':
+                                break
+                    
+                        for space in area.spaces:
+                            print('space type: %s' % space.type)
+                            if space.type == 'VIEW_3D':
+                                break
+                    
+                        break
+                break
+        
+               
         override = context.copy()
         override['window'] = window
-        #override['screen'] = screen
-        #override['space'] = space
+        override['screen'] = screen
         override['area'] = area
-        #override['region_data'] = area.spaces.active
         
-        #keep trak of existing areas before we split one
-        
-        
-                      
-        #bpy.ops.screen.area_dupli(override)
-        
-        override = bpy.context.copy()
-        for area in screen.areas:
-            if area.type == 'VIEW_3D':
-                for region in area.regions:
-                    if region.type == 'WINDOW':
-                        break
-                    
-                for space in area.spaces:
-                    if space.type == 'VIEW_3D':
-                        break
-                    
-                break
-        
-        #override['area'] = area
-        #bpy.ops.screen.area_split(override, direction='VERTICAL', factor=0.5, mouse_x=-100, mouse_y=-100)
-        #bpy.ops.screen.area_split(override, direction='VERTICAL', factor=0.5, mouse_x=-100, mouse_y=-100)
-        
-        '''
-        for area in screen.areas:
-            if area.type == 'VIEW_3D':
-                for region in area.regions:
-                    if region.type == 'WINDOW':
-                        break
-                    
-                for space in area.spaces:
-                    if space.type == 'VIEW_3D':
-                        break
-                    
-                break
-                                     
-        bpy.ops.view3d.localview()
-        '''
+        print('reality check %s, %i' % (area.type, window.width))     
+        ret = bpy.ops.screen.area_split(override, direction='VERTICAL', factor=0.5, mouse_x=-100, mouse_y=-100)
+        print(ret)
+        print('are we getting this far')
         
         return {'FINISHED'}
+    
+    
         if context.object:
             context.window_manager.modal_handler_add(self)
             return {'RUNNING_MODAL'}
