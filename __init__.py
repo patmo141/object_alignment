@@ -18,13 +18,90 @@ bl_info = {
 import numpy as np
 import time
 import bpy
+import blf
+import bgl
 from bpy.types import Operator
 from bpy.props import FloatVectorProperty, StringProperty, IntProperty, BoolProperty, FloatProperty
 from bpy.types import Operator, AddonPreferences
 from bpy_extras.object_utils import AddObjectHelper, object_data_add
+from bpy_extras import view3d_utils
 from mathutils import Vector, Matrix, Quaternion
 
+def tag_redraw_all_view3d():
+    context = bpy.context
 
+    # Py cant access notifers
+    for window in context.window_manager.windows:
+        for area in window.screen.areas:
+            if area.type == 'VIEW_3D':
+                for region in area.regions:
+                    if region.type == 'WINDOW':
+                        region.tag_redraw()
+                        
+def draw_3d_points(context, points, color, size):
+    '''
+    draw a bunch of dots
+    args:
+        points: a list of tuples representing x,y SCREEN coordinate eg [(10,30),(11,31),...]
+        color: tuple (r,g,b,a)
+        size: integer? maybe a float
+    '''
+    points_2d = [view3d_utils.location_3d_to_region_2d(context.region, context.space_data.region_3d, loc) for loc in points]
+
+    bgl.glColor4f(*color)
+    bgl.glPointSize(size)
+    bgl.glBegin(bgl.GL_POINTS)
+    for coord in points_2d:
+        #TODO:  Debug this problem....perhaps loc_3d is returning points off of the screen.
+        if coord:
+            bgl.glVertex2f(*coord)  
+
+    bgl.glEnd()   
+    return
+
+
+def draw_3d_points_revised(context, points, color, size):
+    region = context.region
+    region3d = context.space_data.region_3d
+    
+    
+    region_mid_width = region.width / 2.0
+    region_mid_height = region.height / 2.0
+    
+    perspective_matrix = region3d.perspective_matrix.copy()
+    
+    bgl.glColor4f(*color)
+    bgl.glPointSize(size)
+    bgl.glBegin(bgl.GL_POINTS)
+    
+    for vec in points:
+    
+        vec_4d = perspective_matrix * vec.to_4d()
+        if vec_4d.w > 0.0:
+            x = region_mid_width + region_mid_width * (vec_4d.x / vec_4d.w)
+            y = region_mid_height + region_mid_height * (vec_4d.y / vec_4d.w)
+            
+            bgl.glVertex3f(x, y, 0)
+
+            
+    bgl.glEnd()
+
+def draw_3d_text(context, font_id, text, vec):
+    region = context.region
+    region3d = context.space_data.region_3d
+    
+    
+    region_mid_width = region.width / 2.0
+    region_mid_height = region.height / 2.0
+    
+    perspective_matrix = region3d.perspective_matrix.copy()
+    vec_4d = perspective_matrix * vec.to_4d()
+    if vec_4d.w > 0.0:
+        x = region_mid_width + region_mid_width * (vec_4d.x / vec_4d.w)
+        y = region_mid_height + region_mid_height * (vec_4d.y / vec_4d.w)
+
+        blf.position(font_id, x + 3.0, y - 4.0, 0.0)
+        blf.draw(font_id, text)    
 #Preferences
 class AlignmentAddonPreferences(AddonPreferences):
     # this must match the addon name, use '__package__'
@@ -112,6 +189,7 @@ class ComplexAlignmentPanel(bpy.types.Panel):
         
         row = layout.row()
         row.operator('object.align_picked_points')
+        row.operator('screen.area_dupli', icon = 'FULLSCREEN_ENTER', text = '')
         
         row = layout.row()
         row.operator('object.align_icp')
@@ -147,6 +225,22 @@ def rigid_transform_3D(A, B):
 
     return R, t
 
+def obj_ray_cast(obj, matrix, ray_origin, ray_target):
+    """Wrapper for ray casting that moves the ray into object space"""
+
+    # get the ray relative to the object
+    matrix_inv = matrix.inverted()
+    ray_origin_obj = matrix_inv * ray_origin
+    ray_target_obj = matrix_inv * ray_target
+
+    # cast the ray
+    hit, normal, face_index = obj.ray_cast(ray_origin_obj, ray_target_obj)
+
+    if face_index != -1:
+        return hit, normal, face_index
+    else:
+        return None, None, None
+        
 class OJECT_OT_align_add_include(bpy.types.Operator):
     """Adds a vertex group and puts in weight paint mode"""
     bl_idname = "object.align_include"
@@ -303,6 +397,32 @@ def make_pairs(align_obj, base_obj, vlist, thresh, sample = 0):
         return A, B
         
 
+def draw_callback_px(self, context):
+    
+
+    font_id = 0  # XXX, need to find out how best to get this.
+
+    # draw some text
+    blf.position(font_id, 10, 10, 0)
+    blf.size(font_id, 20, 72)  
+        
+    delta = time.time() - self.start_time
+    
+    if context.area.x == self.area_align.x:
+        blf.draw(font_id, "Align: "+ self.align_msg)
+        points = self.align_points
+        color = (1,0,0,1)
+    else:
+        blf.draw(font_id, "Base: " + self.base_msg)
+        points = self.base_points
+        color = (0,1,0,1)
+    
+    draw_3d_points_revised(context, points, color, 4)
+    
+    for i, vec in enumerate(points):
+        ind = str(i)
+        draw_3d_text(context, font_id, ind, vec)
+    
 class OBJECT_OT_align_pick_points(bpy.types.Operator):
     """Algin two objects with 3 or more pair of picked poitns"""
     bl_idname = "object.align_picked_points"
@@ -313,10 +433,103 @@ class OBJECT_OT_align_pick_points(bpy.types.Operator):
         condition_1 = len(context.selected_objects) == 2
         conidion_2 = context.object.type == 'MESH'
         return condition_1 and condition_1
-    
-    
-    def modal(self, context, event):
 
+    def modal(self, context, event):
+        
+        tag_redraw_all_view3d()
+        
+        if len(self.align_points) < 3:
+            self.align_msg = "Pick at least %s more pts" % str(3 - len(self.align_points))
+        else:
+            self.align_msg = "More points optional"
+                        
+        if len(self.base_points) < 3:
+            self.base_msg = "Pick at last %s more pts" % str(3 - len(self.base_points))
+        else:
+            self.base_msg = "More points optional"
+            
+        
+        if len(self.base_points) > 3 and len(self.align_points) > 3 and len(self.base_points) != len(self.align_points):
+            
+            if len(self.align_points) < len(self.base_points):
+                self.align_msg = "Pick %s more pts to match" % str(len(self.base_points) - len(self.align_points))
+            else:
+                self.base_msg = "Pick %s more pts to match" % str(len(self.align_points) - len(self.base_points))
+                
+        if len(self.base_points) == len(self.align_points) and len(self.base_points) >= 3:
+            self.base_msg = "Hit Enter to Align"
+            self.align_msg = "Hit Enter to Align"            
+    
+
+        if event.type == 'LEFTMOUSE' and event.value == 'PRESS':
+            
+            ray_max = 10000
+            
+            if event.mouse_x > self.area_align.x and event.mouse_x < self.area_align.x + self.area_align.width:
+                
+                for reg in self.area_align.regions:
+                    if reg.type == 'WINDOW':
+                        region = reg
+                for spc in self.area_align.spaces:
+                    if spc.type == 'VIEW_3D':
+                        rv3d = spc.region_3d
+                
+                #just transform the mouse window coords into the region coords        
+                coord = (event.mouse_x - region.x, event.mouse_y - region.y)
+                
+                #are the cords the problem
+                print('align cords: ' + str(coord))
+                print(str((event.mouse_region_x, event.mouse_region_y)))
+                        
+                view_vector = view3d_utils.region_2d_to_vector_3d(region, rv3d, coord)
+                ray_origin = view3d_utils.region_2d_to_origin_3d(region, rv3d, coord)
+                ray_target = ray_origin + (view_vector * ray_max)
+            
+                print('in the align object window')
+                hit, normal, face_index = obj_ray_cast(self.obj_align, self.obj_align.matrix_world, ray_origin, ray_target)
+                
+                if hit:
+                    print('hit! align_obj %s' % self.obj_align.name)
+                    self.align_points.append(self.obj_align.matrix_world * hit)
+
+            else:
+                    
+                for reg in self.area_base.regions:
+                    if reg.type == 'WINDOW':
+                        region = reg
+                for spc in self.area_base.spaces:
+                    if spc.type == 'VIEW_3D':
+                        rv3d = spc.region_3d
+                        
+                coord = (event.mouse_x - region.x, event.mouse_y - region.y)        
+                view_vector = view3d_utils.region_2d_to_vector_3d(region, rv3d, coord)
+                ray_origin = view3d_utils.region_2d_to_origin_3d(region, rv3d, coord)
+                ray_target = ray_origin + (view_vector * ray_max)
+                
+                print('in the base object window')
+                hit, normal, face_index = obj_ray_cast(self.obj_base, self.obj_base.matrix_world, ray_origin, ray_target)
+                
+                if hit:
+                    print('hit! base_obj %s' % self.obj_base.name)
+                    self.base_points.append(self.obj_base.matrix_world * hit) #points in local space for local space drawing!      
+            
+                    
+            return {'RUNNING_MODAL'}
+            
+        elif event.type == 'RIGHTMOUSE' and event.value == 'PRESS':
+            
+            if event.mouse_x > self.area_align.x and event.mouse_x < self.area_align.x + self.area_align.width:
+                self.align_points.pop()
+            else:
+                self.base_points.pop()
+            
+            return {'RUNNING_MODAL'}
+            
+            
+        if event.type in {'WHEELUPMOUSE', 'WHEELDOWNMOUSE'}:
+            
+            return {'PASS_THROUGH'}
+        
         if self.modal_state == 'NAVIGATING':
             
             if (event.type in {'MOUSEMOVE',
@@ -350,71 +563,146 @@ class OBJECT_OT_align_pick_points(bpy.types.Operator):
                         
             return {'PASS_THROUGH'}
         
-        elif event.type in {'RIGHTMOUSE', 'ESC'}:
-            
+        elif event.type in {'ESC'}:
+            bpy.types.SpaceView3D.draw_handler_remove(self._handle, 'WINDOW')
             return {'CANCELLED'}
-
+        
+        elif event.type == 'RET':
+            
+            if len(self.align_points) > 3 and len(self.base_points) > 3:
+                bpy.types.SpaceView3D.draw_handler_remove(self._handle, 'WINDOW')
+                self.de_localize(context)
+                self.align_obj(context)
+                
+                return {'FINISHED'}
+            
         return {'RUNNING_MODAL'}
+            
 
+        
+
+    def de_localize(self,context):
+        
+        override = context.copy()
+        override['area'] = self.area_align
+        bpy.ops.view3d.localview(override)
+        
+        override['area'] = self.area_base
+        bpy.ops.view3d.localview(override)
+        
+    def align_obj(self,context):
+        
+        if len(self.align_points) != len(self.base_points):
+            if len(self.align_points) < len(self.base_points):
+                
+                self.base_points = self.base_points[0:len(self.align_points)]
+            else:
+                self.align_points = self.align_points[0:len(self.base_points)]
+                
+        A = np.zeros(shape = [len(self.base_points), 3])
+        B = np.zeros(shape = [len(self.align_points), 3])
+        
+        for i in range(0,len(self.base_points)):
+            V1 = self.align_points[i]
+            V2 = self.base_points[i]
+    
+            A[i][0], A[i][1], A[i][2] = V1[0], V1[1], V1[2]
+            B[i][0], B[i][1], B[i][2] = V2[0], V2[1], V2[2]  
+            
+        
+        (R, T) = rigid_transform_3D(np.mat(A), np.mat(B))
+            
+        rot = Matrix(np.array(R))
+        trans = Vector(T)
+        quat = rot.to_quaternion()
+        self.obj_align.rotation_mode = 'QUATERNION'
+        self.obj_align.location += trans
+        self.obj_align.rotation_quaternion *= quat
+        self.obj_align.update_tag()
+        context.scene.update()
+        
+            
     def invoke(self, context, event):
         self.modal_state = 'WAITING'
+ 
+        self.start_time = time.time()
+        #capture some mouse info to pass to the draw handler
+        self.winx = event.mouse_x
+        self.winy = event.mouse_y
+            
+        self.regx = event.mouse_region_x
+        self.regy = event.mouse_region_y
         
-        n = len(context.window_manager.windows)
+        self.base_msg = 'Select 3 or more points'
+        self.align_msg = 'Select 3 or more points'
         
-        windows = [window.as_pointer() for window in context.window_manager.windows]
-        print('There are this many windows %i' % len(context.window_manager.windows))
-        #pop up a new 3d view area.
-        #Pray for now the user is in a 3d view
-        bpy.ops.screen.area_dupli('INVOKE_DEFAULT')
         
-        print('Now there are this many windows %i' % len(context.window_manager.windows))
+        obj1_name = context.object.name
+        obj2_name = [obj for obj in context.selected_objects if obj != context.object][0].name
         
-        for window in context.window_manager.windows:
-            if window.as_pointer() not in windows:
-                print('found the new window')
-                print('it is %i wide and %i tall' % (window.width, window.height))
-                screen = window.screen
+        for ob in context.scene.objects:
+            ob.select = False
         
-                #keep track of exisiting areas, because we will make a new one
-                #areas = [area.as_pointer() for area in screen.areas]    
-                for area in screen.areas:
-                    print('area type: %s' % area.type)
-                    if area.type == 'VIEW_3D':
-                        
-                        for region in area.regions:
-                            print('region type: %s' % region.type)
-                            if region.type == 'WINDOW':
-                                break
-                    
-                        for space in area.spaces:
-                            print('space type: %s' % space.type)
-                            if space.type == 'VIEW_3D':
-                                break
-                    
-                        break
-                break
+        context.scene.objects.active = None
         
-               
+        #I did this stupid method becuase I was unsure
+        #if some things were being "sticky" and not
+        #remembering where they were
+        obj1 = bpy.data.objects[obj1_name]
+        obj2 = bpy.data.objects[obj2_name]
+        
+        for ob in bpy.data.objects:
+            if ob.select:
+                print(ob.name)
+                
+        screen = context.window.screen
+        areas = [area.as_pointer() for area in screen.areas]
+        for area in screen.areas:
+            if area.type == 'VIEW_3D':
+                break 
+                       
         override = context.copy()
-        override['window'] = window
-        override['screen'] = screen
         override['area'] = area
         
-        print('reality check %s, %i' % (area.type, window.width))     
-        ret = bpy.ops.screen.area_split(override, direction='VERTICAL', factor=0.5, mouse_x=-100, mouse_y=-100)
-        print(ret)
-        print('are we getting this far')
+        self.area_align = area
         
-        return {'FINISHED'}
-    
-    
-        if context.object:
-            context.window_manager.modal_handler_add(self)
-            return {'RUNNING_MODAL'}
-        else:
-            self.report({'WARNING'}, "No active object, could not finish")
-            return {'CANCELLED'}
+        bpy.ops.screen.area_split(override, direction='VERTICAL', factor=0.5, mouse_x=-100, mouse_y=-100)
         
+        context.scene.objects.active = obj1
+        obj1.select = True
+        obj2.select = False
+        
+        bpy.ops.view3d.localview(override)
+        
+        obj1.select = False
+        context.scene.objects.active = None
+        override = context.copy()
+        for area in screen.areas:
+            if area.as_pointer() not in areas:
+                override['area'] = area
+                self.area_base = area
+                bpy.ops.object.select_all(action = 'DESELECT')
+                context.scene.objects.active = obj2
+                obj2.select = True
+                override['selected_objects'] = [obj2]
+                override['selected_editable_objects'] = [obj2]
+                override['object'] = obj2
+                override['active_object'] = obj2
+                bpy.ops.view3d.localview(override)
+                break
+ 
+        
+        self.obj_align = obj1
+        self.obj_base = obj2
+        
+        #hooray, we will raycast in local view!
+        self.align_points = []
+        self.base_points = []
+        
+        context.window_manager.modal_handler_add(self)
+        self._handle = bpy.types.SpaceView3D.draw_handler_add(draw_callback_px, (self, context), 'WINDOW', 'POST_PIXEL')
+        return {'RUNNING_MODAL'}
+
                     
 class OJECT_OT_icp_align(bpy.types.Operator):
     """Uses ICP alignment to iteratevely aligne two objects"""
