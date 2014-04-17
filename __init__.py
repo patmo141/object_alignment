@@ -611,13 +611,32 @@ class OBJECT_OT_align_pick_points(bpy.types.Operator):
             
         
         (R, T) = rigid_transform_3D(np.mat(A), np.mat(B))
-            
+    
         rot = Matrix(np.array(R))
         trans = Vector(T)
+        
+        a_com = Vector((0,0,0))
+        b_com = Vector((0,0,0))
+        
+        for i, v in enumerate(self.align_points):
+            a_com += v
+            b_com += self.base_points[i]
+            
+        a_com *= 1/len(self.align_points)
+        b_com *= 1/len(self.base_points)
+        print(trans.length)
+        alt_trans = b_com - a_com
+        print(alt_trans.length)
+        
+        self.obj_align.location += trans
+        
+        self.obj_align.update_tag()
+        context.scene.update()
+        
         quat = rot.to_quaternion()
         self.obj_align.rotation_mode = 'QUATERNION'
-        self.obj_align.location += trans
         self.obj_align.rotation_quaternion *= quat
+        
         self.obj_align.update_tag()
         context.scene.update()
         
@@ -723,22 +742,26 @@ class OJECT_OT_icp_align(bpy.types.Operator):
         
         vlist = []
         #figure out if we need to do any inclusion/exclusion
-        group_lookup = {g.index: g.name for g in align_obj.vertex_groups}
+        group_lookup = {g.name: g.index for g in align_obj.vertex_groups}
         if 'icp_include' in align_obj.vertex_groups:
             group = group_lookup['icp_include']
             
             for v in align_obj.data.vertices:
                 for g in v.groups:
-                    if g.group == group:
-                        vlist.append[v.index]
+                    if g.group == group and g.weight > 0.9:
+                        vlist.append(v.index)
     
         elif 'icp_exclude' in align_obj.vertex_groups:
-            group = group_lookup('icp_exclude')
+            group = group_lookup['icp_exclude']
             for v in align_obj.data.vertices:
                 v_groups = [g.group for g in v.groups]
-                if group not in v_groups:        
-                    vlist.append[v.index]
-                    
+                if group not in v_groups:
+                    vlist.append(v.index)
+                else:
+                    for g in v.groups:
+                        if g.group == group and g.weight < 0.1:
+                            vlist.append(v.index)
+
         #unfortunate way to do this..
         else:
             vlist = [v.index for v in align_obj.data.vertices]
