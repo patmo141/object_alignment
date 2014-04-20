@@ -23,14 +23,14 @@ import bpy
 import blf
 import bgl
 from bpy.types import Operator
-from bpy.props import FloatVectorProperty, StringProperty, IntProperty, BoolProperty, FloatProperty
+from bpy.props import FloatVectorProperty, StringProperty, IntProperty, BoolProperty, FloatProperty, EnumProperty
 from bpy.types import Operator, AddonPreferences
 from bpy_extras.object_utils import AddObjectHelper, object_data_add
 from bpy_extras import view3d_utils
 from mathutils import Vector, Matrix, Quaternion
 
 # epsilon for testing whether a number is close to zero
-_EPS = numpy.finfo(float).eps * 4.0
+_EPS = np.finfo(float).eps * 4.0
 
 def tag_redraw_all_view3d():
     context = bpy.context
@@ -220,6 +220,12 @@ def affine_matrix_from_points(v0, v1, shear=True, scale=True, usesvd=True):
 
     ndims = v0.shape[0]
     if ndims < 2 or v0.shape[1] < ndims or v0.shape != v1.shape:
+        print(ndims < 2)
+        print(v0.shape[1] < ndims)
+        print(v0.shape != v1.shape)
+        
+        print(ndims)
+        
         raise ValueError("input arrays are of wrong shape or type")
 
     # move centroids to origin
@@ -329,6 +335,12 @@ class AlignmentAddonPreferences(AddonPreferences):
             name="Use Target",
             description = "Calc alignment stats at each iteration to assess convergence. SLower per step, may result in less steps",
             default = True)
+    
+    align_methods =['RIGID','ROT_LOC_SCALE']#,'AFFINE']
+    align_items = []
+    for index, item in enumerate(align_methods):
+        align_items.append((str(index), align_methods[index], str(index)))
+    align_meth = EnumProperty(items = align_items, name="Alignment Method", description="Changes how picked points registration aligns object", default='0', options={'ANIMATABLE'}, update=None, get=None, set=None)
 
     def draw(self, context):
         layout = self.layout
@@ -340,6 +352,7 @@ class AlignmentAddonPreferences(AddonPreferences):
         layout.prop(self, "min_start")
         layout.prop(self, "use_target")
         layout.prop(self, "target_d")
+        layout.prop(self, "align_meth")
         
 
 class ComplexAlignmentPanel(bpy.types.Panel):
@@ -543,11 +556,12 @@ class OJECT_OT_align_exclude_clear(bpy.types.Operator):
 def make_pairs(align_obj, base_obj, vlist, thresh, sample = 0, calc_stats = False):
     '''
     vlist is a list of vertex indices in the align object to use
-    for alignment
+    for alignment.  Will be in align_obj local space!
     '''
     
     mx1 = align_obj.matrix_world
     mx2 = base_obj.matrix_world
+    
     imx1 = mx1.inverted()
     imx2 = mx2.inverted()
     
@@ -566,17 +580,18 @@ def make_pairs(align_obj, base_obj, vlist, thresh, sample = 0, calc_stats = Fals
         for vert_ind in vlist:
             
             vert = align_obj.data.vertices[vert_ind]
-            #closest point for point clouds
+            #closest point for point clouds.  Local space of base obj
             co_find = imx2 * (mx1 * vert.co)
             
             #closest surface point for triangle mesh
             #this is set up for a  well modeled aligning object with
             #with a noisy or scanned base object
-            co1, normal, face_index = base_obj.closest_point_on_mesh(imx2 * (mx1 * vert.co))
-            dist = (co_find - co1).length
+            co1, normal, face_index = base_obj.closest_point_on_mesh(co_find)
+            
+            dist = (mx2 * co_find - mx2 * co1).length
             if face_index != -1 and dist < thresh:
-                verts1.append(mx1 * vert.co)
-                verts2.append(mx2 * co1)
+                verts1.append(vert.co)
+                verts2.append(imx1 * (mx2 * co1))
                 if calc_stats:
                     dists.append(dist)
         
@@ -615,11 +630,11 @@ def draw_callback_px(self, context):
     
     if context.area.x == self.area_align.x:
         blf.draw(font_id, "Align: "+ self.align_msg)
-        points = self.align_points
+        points = [self.obj_align.matrix_world * p for p in self.align_points]
         color = (1,0,0,1)
     else:
         blf.draw(font_id, "Base: " + self.base_msg)
-        points = self.base_points
+        points = [self.obj_align.matrix_world * p for p in self.base_points]
         color = (0,1,0,1)
     
     draw_3d_points_revised(context, points, color, 4)
@@ -695,7 +710,8 @@ class OBJECT_OT_align_pick_points(bpy.types.Operator):
                 
                 if hit:
                     print('hit! align_obj %s' % self.obj_align.name)
-                    self.align_points.append(self.obj_align.matrix_world * hit)
+                    #local space of align object
+                    self.align_points.append(hit)
 
             else:
                     
@@ -716,7 +732,8 @@ class OBJECT_OT_align_pick_points(bpy.types.Operator):
                 
                 if hit:
                     print('hit! base_obj %s' % self.obj_base.name)
-                    self.base_points.append(self.obj_base.matrix_world * hit) #points in local space for local space drawing!      
+                    #points in local space of align object
+                    self.base_points.append(self.obj_align.matrix_world.inverted() * self.obj_base.matrix_world * hit)    
             
                     
             return {'RUNNING_MODAL'}
@@ -795,9 +812,11 @@ class OBJECT_OT_align_pick_points(bpy.types.Operator):
         override = context.copy()
         override['area'] = self.area_align
         bpy.ops.view3d.localview(override)
+        bpy.ops.view3d.view_selected(override)
         
         override['area'] = self.area_base
         bpy.ops.view3d.localview(override)
+        bpy.ops.view3d.view_selected(override)
         
     def align_obj(self,context):
         
@@ -808,46 +827,37 @@ class OBJECT_OT_align_pick_points(bpy.types.Operator):
             else:
                 self.align_points = self.align_points[0:len(self.base_points)]
                 
-        A = np.zeros(shape = [len(self.base_points), 3])
-        B = np.zeros(shape = [len(self.align_points), 3])
+        A = np.zeros(shape = [3,len(self.base_points)])
+        B = np.zeros(shape = [3,len(self.base_points)])
         
         for i in range(0,len(self.base_points)):
             V1 = self.align_points[i]
             V2 = self.base_points[i]
     
-            A[i][0], A[i][1], A[i][2] = V1[0], V1[1], V1[2]
-            B[i][0], B[i][1], B[i][2] = V2[0], V2[1], V2[2]  
+            A[0][i], A[1][i], A[2][i] = V1[0], V1[1], V1[2]
+            B[0][i], B[1][i], B[2][i] = V2[0], V2[1], V2[2]  
+
+        
+        #test new method
+        align_meth = context.user_preferences.addons['object_alignment'].preferences.align_meth
+        
+        if align_meth == '0': #rigid transform
+            M = affine_matrix_from_points(A, B, shear=False, scale=False, usesvd=True)
+        elif align_meth == '1': # rot, loc, scale
+            M = affine_matrix_from_points(A, B, shear=False, scale=True, usesvd=True)
+        #else: #affine
+            #M = affine_matrix_from_points(A, B, shear=True, scale=True, usesvd=True)
             
         
-        (R, T) = rigid_transform_3D(np.mat(A), np.mat(B))
-    
-        rot = Matrix(np.array(R))
-        trans = Vector(T)
-        
-        a_com = Vector((0,0,0))
-        b_com = Vector((0,0,0))
-        
-        for i, v in enumerate(self.align_points):
-            a_com += v
-            b_com += self.base_points[i]
-            
-        a_com *= 1/len(self.align_points)
-        b_com *= 1/len(self.base_points)
-        print(trans.length)
-        alt_trans = b_com - a_com
-        print(alt_trans.length)
-        
-           
-        quat = rot.to_quaternion()
-        
-        self.obj_align.location += self.obj_base.location + trans - quat * self.obj_align.matrix_world.to_translation()
-        
-        
-        self.obj_align.rotation_mode = 'QUATERNION'
-        self.obj_align.rotation_quaternion *= quat
-        
-        
-        
+        new_mat = Matrix.Identity(4)
+        for n in range(0,4):
+            for m in range(0,4):
+                new_mat[n][m] = M[n][m]
+
+        #because we calced transform in local space
+        #it's this easy to update the obj...
+        self.obj_align.matrix_world = self.obj_align.matrix_world * new_mat
+
         self.obj_align.update_tag()
         context.scene.update()
         
@@ -1000,7 +1010,8 @@ class OJECT_OT_icp_align(bpy.types.Operator):
             rot = Matrix(np.array(R))
             trans = Vector(T)
             quat = rot.to_quaternion()
-            align_obj.location += trans
+            
+            align_obj.location += align_obj.matrix_world.to_3x3() * trans
             align_obj.rotation_quaternion *= quat
             align_obj.update_tag()
             context.scene.update()
@@ -1031,6 +1042,7 @@ class OJECT_OT_icp_align(bpy.types.Operator):
             
         print('Aligned obj in %f sec' % time_taken)   
         return {'FINISHED'}
+
     
 def register():
     bpy.utils.register_class(AlignmentAddonPreferences)
