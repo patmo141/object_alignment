@@ -363,6 +363,7 @@ class ComplexAlignmentPanel(bpy.types.Panel):
     bl_region_type = 'TOOLS'
 
     def draw(self, context):
+        settings = context.user_preferences.addons['object_alignment'].preferences
         layout = self.layout
 
         
@@ -387,6 +388,8 @@ class ComplexAlignmentPanel(bpy.types.Panel):
             row = layout.row()
             row.label(text="No Base object!")
         
+        row = layout.row()
+        row.label(text = 'Pre Processing')
         row = layout.row()    
         row.operator('object.align_include')   
         row.operator('object.align_include_clear', icon = 'X', text = '')
@@ -396,11 +399,27 @@ class ComplexAlignmentPanel(bpy.types.Panel):
         row.operator('object.align_exclude_clear', icon = 'X', text = '')
         
         row = layout.row()
+        row.label(text = 'Initial Alignment')
+        row = layout.row()
         row.operator('object.align_picked_points')
         row.operator('screen.area_dupli', icon = 'FULLSCREEN_ENTER', text = '')
         
         row = layout.row()
+        row.prop(settings, "align_meth")
+        
+        row = layout.row()
+        row.label(text = 'Iterative Alignment')
+        row = layout.row()
         row.operator('object.align_icp')
+        
+        row = layout.row()
+        row.prop(settings, 'icp_iterations')
+        row = layout.row()
+        row.prop(settings, 'min_start')
+        row = layout.row()
+        row.prop(settings, 'use_target')
+        row.prop(settings, 'target_d')
+        
             
 
 #modified from http://nghiaho.com/?page_id=671    
@@ -598,15 +617,15 @@ def make_pairs(align_obj, base_obj, vlist, thresh, sample = 0, calc_stats = Fals
         #later we will pre-process data to get nice data sets
         #eg...closest points after initial guess within a certain threshold
         #for now, take the verts and make them a numpy array
-        A = np.zeros(shape = [len(verts1), 3])
-        B = np.zeros(shape = [len(verts1), 3])
+        A = np.zeros(shape = [3,len(verts1)])
+        B = np.zeros(shape = [3,len(verts1)])
         
         for i in range(0,len(verts1)):
             V1 = verts1[i]
             V2 = verts2[i]
     
-            A[i][0], A[i][1], A[i][2] = V1[0], V1[1], V1[2]
-            B[i][0], B[i][1], B[i][2] = V2[0], V2[1], V2[2]
+            A[0][i], A[1][i], A[2][i] = V1[0], V1[1], V1[2]
+            B[0][i], B[1][i], B[2][i] = V2[0], V2[1], V2[2]
         
         if calc_stats:
             avg_dist = np.mean(dists)
@@ -706,7 +725,7 @@ class OBJECT_OT_align_pick_points(bpy.types.Operator):
                 ray_target = ray_origin + (view_vector * ray_max)
             
                 print('in the align object window')
-                hit, normal, face_index = obj_ray_cast(self.obj_align, self.obj_align.matrix_world, ray_origin, ray_target)
+                hit, normal, face_index = obj_ray_cast(self.obj_align, self.obj_align.matrix_world, ray_origin - (.1 * ray_max * view_vector), ray_target)
                 
                 if hit:
                     print('hit! align_obj %s' % self.obj_align.name)
@@ -728,7 +747,7 @@ class OBJECT_OT_align_pick_points(bpy.types.Operator):
                 ray_target = ray_origin + (view_vector * ray_max)
                 
                 print('in the base object window')
-                hit, normal, face_index = obj_ray_cast(self.obj_base, self.obj_base.matrix_world, ray_origin, ray_target)
+                hit, normal, face_index = obj_ray_cast(self.obj_base, self.obj_base.matrix_world, ray_origin - (.1 * ray_max * view_vector), ray_target)
                 
                 if hit:
                     print('hit! base_obj %s' % self.obj_base.name)
@@ -957,6 +976,7 @@ class OJECT_OT_icp_align(bpy.types.Operator):
         return condition_1 and condition_1
 
     def execute(self, context):
+        align_meth = context.user_preferences.addons['object_alignment'].preferences.align_meth
         start = time.time()
         align_obj = context.object
         base_obj = [obj for obj in context.selected_objects if obj != align_obj][0]
@@ -1005,14 +1025,22 @@ class OJECT_OT_icp_align(bpy.types.Operator):
             
             
             (A, B, d_stats) = make_pairs(align_obj, base_obj, vlist, thresh, factor, calc_stats = use_target)
-            (R, T) = rigid_transform_3D(np.mat(A), np.mat(B))
             
-            rot = Matrix(np.array(R))
-            trans = Vector(T)
-            quat = rot.to_quaternion()
+        
+            if align_meth == '0': #rigid transform
+                M = affine_matrix_from_points(A, B, shear=False, scale=False, usesvd=True)
+            elif align_meth == '1': # rot, loc, scale
+                M = affine_matrix_from_points(A, B, shear=False, scale=True, usesvd=True)
             
-            align_obj.location += align_obj.matrix_world.to_3x3() * trans
-            align_obj.rotation_quaternion *= quat
+            new_mat = Matrix.Identity(4)
+            for y in range(0,4):
+                for z in range(0,4):
+                    new_mat[y][z] = M[y][z]
+                
+            align_obj.matrix_world = align_obj.matrix_world * new_mat
+            trans = new_mat.to_translation()
+            quat = new_mat.to_quaternion()
+            
             align_obj.update_tag()
             context.scene.update()
         
