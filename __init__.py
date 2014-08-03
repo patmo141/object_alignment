@@ -8,7 +8,7 @@ bl_info = {
     "name": "Complex Alignment",
     "author": "Patrick Moore",
     "version": (0, 1),
-    "blender": (2, 6, 0),
+    "blender": (2, 6, 9),
     "location": "View3D > Tools > Alignment",
     "description": "Help align objects which have overlapping featuers",
     "warning": "",
@@ -357,7 +357,7 @@ class AlignmentAddonPreferences(AddonPreferences):
 
 class ComplexAlignmentPanel(bpy.types.Panel):
     """UI for ICP Alignment"""
-    bl_category = "Alignment"
+    #bl_category = "Alignment"
     bl_label = "ICP Object Alignment"
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'TOOLS'
