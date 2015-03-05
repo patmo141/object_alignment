@@ -1087,6 +1087,11 @@ def register():
 def unregister():
     bpy.utils.unregister_class(AlignmentAddonPreferences)
     bpy.utils.unregister_class(OJECT_OT_icp_align)
+    bpy.utils.unregister_class(OJECT_OT_align_add_include)
+    bpy.utils.unregister_class(OJECT_OT_align_add_exclude)
+    bpy.utils.unregister_class(OJECT_OT_align_include_clear)
+    bpy.utils.unregister_class(OJECT_OT_align_exclude_clear)
+    bpy.utils.unregister_class(OBJECT_OT_align_pick_points)
     bpy.utils.unregister_class(ComplexAlignmentPanel)
 
 
