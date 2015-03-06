@@ -413,7 +413,13 @@ class ComplexAlignmentPanel(bpy.types.Panel):
         row.operator('object.align_icp')
         
         row = layout.row()
+        row.operator('object.align_icp_redraw')
+        
+        row = layout.row()
         row.prop(settings, 'icp_iterations')
+        row = layout.row()
+        row.prop(settings, 'use_sample')
+        row.prop(settings, 'sample_fraction')
         row = layout.row()
         row.prop(settings, 'min_start')
         row = layout.row()
@@ -670,8 +676,8 @@ class OBJECT_OT_align_pick_points(bpy.types.Operator):
     @classmethod
     def poll(cls, context):
         condition_1 = len(context.selected_objects) == 2
-        conidion_2 = context.object.type == 'MESH'
-        return condition_1 and condition_1
+        condition_2 = context.object.type == 'MESH'
+        return condition_1 and condition_2
 
     def modal(self, context, event):
         
@@ -1071,10 +1077,160 @@ class OJECT_OT_icp_align(bpy.types.Operator):
         print('Aligned obj in %f sec' % time_taken)   
         return {'FINISHED'}
 
+class OJECT_OT_icp_align_feedback(bpy.types.Operator):
+    """Uses ICP alignment to iteratevely aligne two objects and redraws every n iterations.  Slower but better to diagnose errors"""
+    bl_idname = "object.align_icp_redraw"
+    bl_label = "ICP Align Redraw"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    _timer = None
     
+    
+    def cancel(self, context):
+        wm = context.window_manager
+        wm.event_timer_remove(self._timer)
+        
+    def finish(self, context):
+        wm = context.window_manager
+        wm.event_timer_remove(self._timer)
+        
+        time_taken = time.time() - self.start
+        
+        if self.d_stats:
+            if self.use_target and not self.converged:
+                print('Maxed out iterations')
+                print('Final Avg Dist: %f' % self.d_stats[0])
+                print('Final St Dev %f' % self.d_stats[1])
+                print('Avg last 5 rotation angle: %f' % np.mean(self.conv_r_list))
+            
+        print('Aligned obj in %f sec' % time_taken)   
+        return {'FINISHED'}  
+    
+    @classmethod
+    def poll(cls, context):
+        condition_1 = len(context.selected_objects) == 2
+        condition_2 = context.object.type == 'MESH'
+        return condition_1 and condition_2
+
+
+    def iterate(self,context):
+        
+        (A, B, self.d_stats) = make_pairs(self.align_obj, self.base_obj, self.vlist, self.thresh, self.sample_factor, calc_stats = self.use_target)
+            
+        
+        if self.align_meth == '0': #rigid transform
+            M = affine_matrix_from_points(A, B, shear=False, scale=False, usesvd=True)
+        elif self.align_meth == '1': # rot, loc, scale
+            M = affine_matrix_from_points(A, B, shear=False, scale=True, usesvd=True)
+        
+        new_mat = Matrix.Identity(4)
+        for y in range(0,4):
+            for z in range(0,4):
+                new_mat[y][z] = M[y][z]
+            
+        self.align_obj.matrix_world = self.align_obj.matrix_world * new_mat
+        trans = new_mat.to_translation()
+        quat = new_mat.to_quaternion()
+        
+        self.align_obj.update_tag()
+        if self.d_stats:
+            i = fmod(self.total_iters,5)
+            self.conv_t_list[i] = trans.length
+            self.conv_r_list[i] = abs(quat.angle)
+            
+            if all(d < self.target_d for d in self.conv_t_list):
+                self.converged = True
+                
+                print('Converged in %s iterations' % str(self.total_iters+1))
+                print('Final Translation: %f ' % self.conv_t_list[i])
+                print('Final Avg Dist: %f' % self.d_stats[0])
+                print('Final St Dev %f' % self.d_stats[1])
+                print('Avg last 5 rotation angle: %f' % np.mean(self.conv_r_list))
+        
+                
+        
+        
+    def invoke(self,context, event):
+        
+        wm = context.window_manager
+        self._timer = wm.event_timer_add(0.01, context.window)
+        wm.modal_handler_add(self)
+        
+        
+        
+        self.align_meth = context.user_preferences.addons['object_alignment'].preferences.align_meth
+        self.start = time.time()
+        self.align_obj = context.object
+        self.base_obj = [obj for obj in context.selected_objects if obj != self.align_obj][0]
+        self.align_obj.rotation_mode = 'QUATERNION'
+        
+        self.vlist = []
+        #figure out if we need to do any inclusion/exclusion
+        group_lookup = {g.name: g.index for g in self.align_obj.vertex_groups}
+        if 'icp_include' in self.align_obj.vertex_groups:
+            group = group_lookup['icp_include']
+            
+            for v in self.align_obj.data.vertices:
+                for g in v.groups:
+                    if g.group == group and g.weight > 0.9:
+                        self.vlist.append(v.index)
+    
+        elif 'icp_exclude' in self.align_obj.vertex_groups:
+            group = group_lookup['icp_exclude']
+            for v in self.align_obj.data.vertices:
+                v_groups = [g.group for g in v.groups]
+                if group not in v_groups:
+                    self.vlist.append(v.index)
+                else:
+                    for g in v.groups:
+                        if g.group == group and g.weight < 0.1:
+                            self.vlist.append(v.index)
+
+        #unfortunate way to do this..
+        else:
+            self.vlist = [v.index for v in self.align_obj.data.vertices]
+            #vlist = [range(0,len(align_obj.data.vertices]  #perhaps much smarter
+        
+        
+        self.thresh = context.user_preferences.addons['object_alignment'].preferences.min_start
+        self.sample_fraction = context.user_preferences.addons['object_alignment'].preferences.sample_fraction
+        self.iters = context.user_preferences.addons['object_alignment'].preferences.icp_iterations
+        self.target_d = context.user_preferences.addons['object_alignment'].preferences.target_d
+        self.use_target = context.user_preferences.addons['object_alignment'].preferences.use_target
+        self.sample_factor = round(1/self.sample_fraction)
+        self.redraw_frequency = context.user_preferences.addons['object_alignment'].preferences.redraw_frequency
+        
+        self.total_iters = 0
+        self.converged = False
+        self.conv_t_list = [self.target_d * 2] * 5  #store last 5 translations
+        self.conv_r_list = [None] * 5
+        
+        
+        return {'RUNNING_MODAL'}
+        
+    def modal(self, context, event):
+        
+        if event.type in {'RIGHTMOUSE', 'ESC'}:
+            return self.cancel(context)
+
+        if event.type == 'TIMER':
+            context.area.tag_redraw()
+            #do this many iterations, then redraw
+            for i in range(0,self.redraw_frequency):
+                if self.total_iters <= self.iters and not self.converged:
+                    self.iterate(context)               
+                    self.total_iters += 1
+            
+                else:
+                    return self.finish(context)
+
+            return {'RUNNING_MODAL'}
+        
+        return {'PASS_THROUGH'}
 def register():
     bpy.utils.register_class(AlignmentAddonPreferences)
     bpy.utils.register_class(OJECT_OT_icp_align)
+    bpy.utils.register_class(OJECT_OT_icp_align_feedback)
     bpy.utils.register_class(OJECT_OT_align_add_include)
     bpy.utils.register_class(OJECT_OT_align_add_exclude)
     bpy.utils.register_class(OJECT_OT_align_include_clear)
@@ -1087,6 +1243,7 @@ def register():
 def unregister():
     bpy.utils.unregister_class(AlignmentAddonPreferences)
     bpy.utils.unregister_class(OJECT_OT_icp_align)
+    bpy.utils.unregister_class(OJECT_OT_icp_align_feedback)
     bpy.utils.unregister_class(OJECT_OT_align_add_include)
     bpy.utils.unregister_class(OJECT_OT_align_add_exclude)
     bpy.utils.unregister_class(OJECT_OT_align_include_clear)
