@@ -982,6 +982,7 @@ class OJECT_OT_icp_align(bpy.types.Operator):
         return condition_1 and condition_1
 
     def execute(self, context):
+        wm=context.window_manager
         align_meth = context.user_preferences.addons['object_alignment'].preferences.align_meth
         start = time.time()
         align_obj = context.object
@@ -1026,9 +1027,11 @@ class OJECT_OT_icp_align(bpy.types.Operator):
         converged = False
         conv_t_list = [target_d * 2] * 5  #store last 5 translations
         conv_r_list = [None] * 5
+        #Use 9999 (the max possible value) so that the indicator displays the actual current iteration.
+        wm.progress_begin(0,9999)
 
         while n < iters  and not converged:
-
+            wm.progress_update(n)
 
             (A, B, d_stats) = make_pairs(align_obj, base_obj, vlist, thresh, factor, calc_stats = use_target)
 
@@ -1074,6 +1077,7 @@ class OJECT_OT_icp_align(bpy.types.Operator):
             print('Final St Dev %f' % d_stats[1])
             print('Avg last 5 rotation angle: %f' % np.mean(conv_r_list))
 
+        wm.progress_end()
         print('Aligned obj in %f sec' % time_taken)
         return {'FINISHED'}
 
