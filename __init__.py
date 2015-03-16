@@ -42,7 +42,7 @@ def tag_redraw_all_view3d():
                 for region in area.regions:
                     if region.type == 'WINDOW':
                         region.tag_redraw()
-                        
+
 def draw_3d_points(context, points, color, size):
     '''
     draw a bunch of dots
@@ -59,46 +59,46 @@ def draw_3d_points(context, points, color, size):
     for coord in points_2d:
         #TODO:  Debug this problem....perhaps loc_3d is returning points off of the screen.
         if coord:
-            bgl.glVertex2f(*coord)  
+            bgl.glVertex2f(*coord)
 
-    bgl.glEnd()   
+    bgl.glEnd()
     return
 
 
 def draw_3d_points_revised(context, points, color, size):
     region = context.region
     region3d = context.space_data.region_3d
-    
-    
+
+
     region_mid_width = region.width / 2.0
     region_mid_height = region.height / 2.0
-    
+
     perspective_matrix = region3d.perspective_matrix.copy()
-    
+
     bgl.glColor4f(*color)
     bgl.glPointSize(size)
     bgl.glBegin(bgl.GL_POINTS)
-    
+
     for vec in points:
-    
+
         vec_4d = perspective_matrix * vec.to_4d()
         if vec_4d.w > 0.0:
             x = region_mid_width + region_mid_width * (vec_4d.x / vec_4d.w)
             y = region_mid_height + region_mid_height * (vec_4d.y / vec_4d.w)
-            
+
             bgl.glVertex3f(x, y, 0)
 
-            
+
     bgl.glEnd()
 
 def draw_3d_text(context, font_id, text, vec):
     region = context.region
     region3d = context.space_data.region_3d
-    
-    
+
+
     region_mid_width = region.width / 2.0
     region_mid_height = region.height / 2.0
-    
+
     perspective_matrix = region3d.perspective_matrix.copy()
     vec_4d = perspective_matrix * vec.to_4d()
     if vec_4d.w > 0.0:
@@ -106,7 +106,7 @@ def draw_3d_text(context, font_id, text, vec):
         y = region_mid_height + region_mid_height * (vec_4d.y / vec_4d.w)
 
         blf.position(font_id, x + 3.0, y - 4.0, 0.0)
-        blf.draw(font_id, text)    
+        blf.draw(font_id, text)
 
 
 def quaternion_matrix(quaternion):
@@ -134,8 +134,8 @@ def quaternion_matrix(quaternion):
         [    q[1, 2]+q[3, 0], 1.0-q[1, 1]-q[3, 3],     q[2, 3]-q[1, 0], 0.0],
         [    q[1, 3]-q[2, 0],     q[2, 3]+q[1, 0], 1.0-q[1, 1]-q[2, 2], 0.0],
         [                0.0,                 0.0,                 0.0, 1.0]])
-    
-    
+
+
 def vector_norm(data, axis=None, out=None):
     """Return length, i.e. Euclidean norm, of ndarray along axis.
 
@@ -173,7 +173,7 @@ def vector_norm(data, axis=None, out=None):
         data *= data
         np.sum(data, axis=axis, out=out)
         np.sqrt(out, out)
-        
+
 def affine_matrix_from_points(v0, v1, shear=True, scale=True, usesvd=True):
     """Return affine transform matrix to register two point sets.
 
@@ -223,9 +223,9 @@ def affine_matrix_from_points(v0, v1, shear=True, scale=True, usesvd=True):
         print(ndims < 2)
         print(v0.shape[1] < ndims)
         print(v0.shape != v1.shape)
-        
+
         print(ndims)
-        
+
         raise ValueError("input arrays are of wrong shape or type")
 
     # move centroids to origin
@@ -299,43 +299,43 @@ class AlignmentAddonPreferences(AddonPreferences):
             name="ICP Iterations",
             default=50
             )
-    
+
     redraw_frequency = IntProperty(
             name="Redraw Iterations",
             description = "Number of iterations between redraw, bigger = less redraw but faster completion",
             default=10)
-    
+
     use_sample = BoolProperty(
             name = "Use Sample",
             description = "Use a sample of verts to align",
             default = False)
-    
+
     sample_fraction = FloatProperty(
             name="Sample Fraction",
             description = "Only fraction of mesh verts for alignment. Less accurate, faster",
             default = 0.5,
             min = 0,
             max = 1)
-    
+
     min_start = FloatProperty(
             name="Minimum Starting Dist",
             description = "Only verts closer than this distance will be included in each iteration",
             default = 0.5,
             min = 0,
             max = 20)
-    
+
     target_d = FloatProperty(
             name="Target Translation",
             description = "If translation of 3 iterations is < target, ICP is considered sucessful",
             default = 0.01,
             min = 0,
             max = 10)
-    
+
     use_target = BoolProperty(
             name="Use Target",
             description = "Calc alignment stats at each iteration to assess convergence. SLower per step, may result in less steps",
             default = True)
-    
+
     align_methods =['RIGID','ROT_LOC_SCALE']#,'AFFINE']
     align_items = []
     for index, item in enumerate(align_methods):
@@ -353,7 +353,7 @@ class AlignmentAddonPreferences(AddonPreferences):
         layout.prop(self, "use_target")
         layout.prop(self, "target_d")
         layout.prop(self, "align_meth")
-        
+
 
 class ComplexAlignmentPanel(bpy.types.Panel):
     """UI for ICP Alignment"""
@@ -366,7 +366,7 @@ class ComplexAlignmentPanel(bpy.types.Panel):
         settings = context.user_preferences.addons['object_alignment'].preferences
         layout = self.layout
 
-        
+
 
         row = layout.row()
         row.label(text="Alignment Tools", icon='MOD_SHRINKWRAP')
@@ -375,46 +375,46 @@ class ComplexAlignmentPanel(bpy.types.Panel):
         if align_obj:
             row = layout.row()
             row.label(text="Align object is: " + align_obj.name)
-        
+
         else:
             row.label(text='No Alignment Object!')
-        
+
         if len(context.selected_objects) == 2:
-            
+
             base_obj = [obj for obj in context.selected_objects if obj != align_obj][0]
             row = layout.row()
             row.label(text="Base object is: " + base_obj.name)
         else:
             row = layout.row()
             row.label(text="No Base object!")
-        
+
         row = layout.row()
         row.label(text = 'Pre Processing')
-        row = layout.row()    
-        row.operator('object.align_include')   
+        row = layout.row()
+        row.operator('object.align_include')
         row.operator('object.align_include_clear', icon = 'X', text = '')
-        
-        row = layout.row()    
-        row.operator('object.align_exclude')    
+
+        row = layout.row()
+        row.operator('object.align_exclude')
         row.operator('object.align_exclude_clear', icon = 'X', text = '')
-        
+
         row = layout.row()
         row.label(text = 'Initial Alignment')
         row = layout.row()
         row.operator('object.align_picked_points')
         row.operator('screen.area_dupli', icon = 'FULLSCREEN_ENTER', text = '')
-        
+
         row = layout.row()
         row.prop(settings, "align_meth")
-        
+
         row = layout.row()
         row.label(text = 'Iterative Alignment')
         row = layout.row()
         row.operator('object.align_icp')
-        
+
         row = layout.row()
         row.operator('object.align_icp_redraw')
-        
+
         row = layout.row()
         row.prop(settings, 'icp_iterations')
         row = layout.row()
@@ -425,10 +425,10 @@ class ComplexAlignmentPanel(bpy.types.Panel):
         row = layout.row()
         row.prop(settings, 'use_target')
         row.prop(settings, 'target_d')
-        
-            
 
-#modified from http://nghiaho.com/?page_id=671    
+
+
+#modified from http://nghiaho.com/?page_id=671
 def rigid_transform_3D(A, B):
     assert len(A) == len(B)
 
@@ -436,7 +436,7 @@ def rigid_transform_3D(A, B):
 
     centroid_A = np.mean(A, axis=0)
     centroid_B = np.mean(B, axis=0)
-    
+
     # centre the points
     AA = A - np.tile(centroid_A, (N, 1))
     BB = B - np.tile(centroid_B, (N, 1))
@@ -473,7 +473,7 @@ def obj_ray_cast(obj, matrix, ray_origin, ray_target):
         return hit, normal, face_index
     else:
         return None, None, None
-        
+
 class OJECT_OT_align_add_include(bpy.types.Operator):
     """Adds a vertex group and puts in weight paint mode"""
     bl_idname = "object.align_include"
@@ -483,7 +483,7 @@ class OJECT_OT_align_add_include(bpy.types.Operator):
     def poll(cls, context):
         condition1 = context.mode in {'OBJECT', 'PAINT_WEIGHT'}
         condition2 = context.active_object
-        
+
         if condition1 and condition2:
             condition3 = context.active_object.type == 'MESH'
         else:
@@ -491,18 +491,18 @@ class OJECT_OT_align_add_include(bpy.types.Operator):
         return condition1 and condition2 and condition3
 
     def execute(self, context):
-        
+
         if 'icp_include' not in context.object.vertex_groups:
-            
+
             new_group = context.object.vertex_groups.new(name = 'icp_include')
-        
+
         bpy.ops.object.vertex_group_set_active(group = 'icp_include')
-            
+
         if context.mode != 'PAINT_WEIGHT':
             bpy.ops.object.mode_set(mode = 'WEIGHT_PAINT')
-            
+
         return {'FINISHED'}
-    
+
 class OJECT_OT_align_include_clear(bpy.types.Operator):
     """Clears the verts from the ICP alignment include group"""
     bl_idname = "object.align_include_clear"
@@ -512,7 +512,7 @@ class OJECT_OT_align_include_clear(bpy.types.Operator):
     def poll(cls, context):
         condition1 = context.mode != 'PAINT_WEIGHT'
         condition2 = context.active_object
-        
+
         if condition1 and condition2:
             condition3 = context.active_object.type == 'MESH'
         else:
@@ -534,7 +534,7 @@ class OJECT_OT_align_add_exclude(bpy.types.Operator):
     def poll(cls, context):
         condition1 = context.mode in {'OBJECT', 'PAINT_WEIGHT'}
         condition2 = context.active_object
-        
+
         if condition1 and condition2:
             condition3 = context.active_object.type == 'MESH'
         else:
@@ -542,17 +542,17 @@ class OJECT_OT_align_add_exclude(bpy.types.Operator):
         return condition1 and condition2 and condition3
 
     def execute(self, context):
-        
+
         if 'icp_exclude' not in context.object.vertex_groups:
             new_group = context.object.vertex_groups.new(name = 'icp_exclude')
-        
+
         bpy.ops.object.vertex_group_set_active(group = 'icp_exclude')
-            
+
         if context.mode != 'PAINT_WEIGHT':
             bpy.ops.object.mode_set(mode = 'WEIGHT_PAINT')
-            
+
         return {'FINISHED'}
-    
+
 class OJECT_OT_align_exclude_clear(bpy.types.Operator):
     """Clears the verts from the ICP alignment exclude group"""
     bl_idname = "object.align_exclude_clear"
@@ -560,10 +560,10 @@ class OJECT_OT_align_exclude_clear(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context):
-        
+
         condition1 = context.mode != 'PAINT_WEIGHT'
         condition2 = context.active_object
-        
+
         if condition1 and condition2:
             condition3 = context.active_object.type == 'MESH'
         else:
@@ -574,65 +574,65 @@ class OJECT_OT_align_exclude_clear(bpy.types.Operator):
         if 'icp_exclude' in context.object.vertex_groups:
             g = context.object.vertex_groups['icp_exclude']
             context.object.vertex_groups.remove(g)
-            
+
         return {'FINISHED'}
-    
+
 
 def make_pairs(align_obj, base_obj, vlist, thresh, sample = 0, calc_stats = False):
     '''
     vlist is a list of vertex indices in the align object to use
     for alignment.  Will be in align_obj local space!
     '''
-    
+
     mx1 = align_obj.matrix_world
     mx2 = base_obj.matrix_world
-    
+
     imx1 = mx1.inverted()
     imx2 = mx2.inverted()
-    
+
     verts1 = []
     verts2 = []
     if calc_stats:
         dists = []
-    
+
     #downsample if needed
     if sample > 1:
         vlist = vlist[0::sample]
-        
+
     if thresh > 0:
         #filter data based on an initial starting dist
         #eacg time in the routine..the limit should go down
         for vert_ind in vlist:
-            
+
             vert = align_obj.data.vertices[vert_ind]
             #closest point for point clouds.  Local space of base obj
             co_find = imx2 * (mx1 * vert.co)
-            
+
             #closest surface point for triangle mesh
             #this is set up for a  well modeled aligning object with
             #with a noisy or scanned base object
             co1, normal, face_index = base_obj.closest_point_on_mesh(co_find)
-            
+
             dist = (mx2 * co_find - mx2 * co1).length
             if face_index != -1 and dist < thresh:
                 verts1.append(vert.co)
                 verts2.append(imx1 * (mx2 * co1))
                 if calc_stats:
                     dists.append(dist)
-        
+
         #later we will pre-process data to get nice data sets
         #eg...closest points after initial guess within a certain threshold
         #for now, take the verts and make them a numpy array
         A = np.zeros(shape = [3,len(verts1)])
         B = np.zeros(shape = [3,len(verts1)])
-        
+
         for i in range(0,len(verts1)):
             V1 = verts1[i]
             V2 = verts2[i]
-    
+
             A[0][i], A[1][i], A[2][i] = V1[0], V1[1], V1[2]
             B[0][i], B[1][i], B[2][i] = V2[0], V2[1], V2[2]
-        
+
         if calc_stats:
             avg_dist = np.mean(dists)
             dev = np.std(dists)
@@ -640,19 +640,19 @@ def make_pairs(align_obj, base_obj, vlist, thresh, sample = 0, calc_stats = Fals
         else:
             d_stats = None
         return A, B, d_stats
-        
+
 
 def draw_callback_px(self, context):
-    
+
 
     font_id = 0  # XXX, need to find out how best to get this.
 
     # draw some text
     blf.position(font_id, 10, 10, 0)
-    blf.size(font_id, 20, 72)  
-        
+    blf.size(font_id, 20, 72)
+
     delta = time.time() - self.start_time
-    
+
     if context.area.x == self.area_align.x:
         blf.draw(font_id, "Align: "+ self.align_msg)
         points = [self.obj_align.matrix_world * p for p in self.align_points]
@@ -661,13 +661,13 @@ def draw_callback_px(self, context):
         blf.draw(font_id, "Base: " + self.base_msg)
         points = [self.obj_align.matrix_world * p for p in self.base_points]
         color = (0,1,0,1)
-    
+
     draw_3d_points_revised(context, points, color, 4)
-    
+
     for i, vec in enumerate(points):
         ind = str(i)
         draw_3d_text(context, font_id, ind, vec)
-    
+
 class OBJECT_OT_align_pick_points(bpy.types.Operator):
     """Algin two objects with 3 or more pair of picked poitns"""
     bl_idname = "object.align_picked_points"
@@ -680,200 +680,200 @@ class OBJECT_OT_align_pick_points(bpy.types.Operator):
         return condition_1 and condition_2
 
     def modal(self, context, event):
-        
+
         tag_redraw_all_view3d()
-        
+
         if len(self.align_points) < 3:
             self.align_msg = "Pick at least %s more pts" % str(3 - len(self.align_points))
         else:
             self.align_msg = "More points optional"
-                        
+
         if len(self.base_points) < 3:
             self.base_msg = "Pick at last %s more pts" % str(3 - len(self.base_points))
         else:
             self.base_msg = "More points optional"
-            
-        
+
+
         if len(self.base_points) > 3 and len(self.align_points) > 3 and len(self.base_points) != len(self.align_points):
-            
+
             if len(self.align_points) < len(self.base_points):
                 self.align_msg = "Pick %s more pts to match" % str(len(self.base_points) - len(self.align_points))
             else:
                 self.base_msg = "Pick %s more pts to match" % str(len(self.align_points) - len(self.base_points))
-                
+
         if len(self.base_points) == len(self.align_points) and len(self.base_points) >= 3:
             self.base_msg = "Hit Enter to Align"
-            self.align_msg = "Hit Enter to Align"            
-    
+            self.align_msg = "Hit Enter to Align"
+
 
         if event.type == 'LEFTMOUSE' and event.value == 'PRESS':
-            
+
             ray_max = 10000
-            
+
             if event.mouse_x > self.area_align.x and event.mouse_x < self.area_align.x + self.area_align.width:
-                
+
                 for reg in self.area_align.regions:
                     if reg.type == 'WINDOW':
                         region = reg
                 for spc in self.area_align.spaces:
                     if spc.type == 'VIEW_3D':
                         rv3d = spc.region_3d
-                
-                #just transform the mouse window coords into the region coords        
+
+                #just transform the mouse window coords into the region coords
                 coord = (event.mouse_x - region.x, event.mouse_y - region.y)
-                
+
                 #are the cords the problem
                 print('align cords: ' + str(coord))
                 print(str((event.mouse_region_x, event.mouse_region_y)))
-                        
+
                 view_vector = view3d_utils.region_2d_to_vector_3d(region, rv3d, coord)
                 ray_origin = view3d_utils.region_2d_to_origin_3d(region, rv3d, coord)
                 ray_target = ray_origin + (view_vector * ray_max)
-            
+
                 print('in the align object window')
                 hit, normal, face_index = obj_ray_cast(self.obj_align, self.obj_align.matrix_world, ray_origin - (.1 * ray_max * view_vector), ray_target)
-                
+
                 if hit:
                     print('hit! align_obj %s' % self.obj_align.name)
                     #local space of align object
                     self.align_points.append(hit)
 
             else:
-                    
+
                 for reg in self.area_base.regions:
                     if reg.type == 'WINDOW':
                         region = reg
                 for spc in self.area_base.spaces:
                     if spc.type == 'VIEW_3D':
                         rv3d = spc.region_3d
-                        
-                coord = (event.mouse_x - region.x, event.mouse_y - region.y)        
+
+                coord = (event.mouse_x - region.x, event.mouse_y - region.y)
                 view_vector = view3d_utils.region_2d_to_vector_3d(region, rv3d, coord)
                 ray_origin = view3d_utils.region_2d_to_origin_3d(region, rv3d, coord)
                 ray_target = ray_origin + (view_vector * ray_max)
-                
+
                 print('in the base object window')
                 hit, normal, face_index = obj_ray_cast(self.obj_base, self.obj_base.matrix_world, ray_origin - (.1 * ray_max * view_vector), ray_target)
-                
+
                 if hit:
                     print('hit! base_obj %s' % self.obj_base.name)
                     #points in local space of align object
-                    self.base_points.append(self.obj_align.matrix_world.inverted() * self.obj_base.matrix_world * hit)    
-            
-                    
+                    self.base_points.append(self.obj_align.matrix_world.inverted() * self.obj_base.matrix_world * hit)
+
+
             return {'RUNNING_MODAL'}
-            
+
         elif event.type == 'RIGHTMOUSE' and event.value == 'PRESS':
-            
+
             if event.mouse_x > self.area_align.x and event.mouse_x < self.area_align.x + self.area_align.width:
                 self.align_points.pop()
             else:
                 self.base_points.pop()
-            
+
             return {'RUNNING_MODAL'}
-            
-            
+
+
         if event.type in {'WHEELUPMOUSE', 'WHEELDOWNMOUSE'}:
-            
+
             return {'PASS_THROUGH'}
-        
+
         if self.modal_state == 'NAVIGATING':
-            
+
             if (event.type in {'MOUSEMOVE',
-                               'MIDDLEMOUSE', 
-                                'NUMPAD_2', 
-                                'NUMPAD_4', 
+                               'MIDDLEMOUSE',
+                                'NUMPAD_2',
+                                'NUMPAD_4',
                                 'NUMPAD_6',
-                                'NUMPAD_8', 
-                                'NUMPAD_1', 
-                                'NUMPAD_3', 
-                                'NUMPAD_5', 
+                                'NUMPAD_8',
+                                'NUMPAD_1',
+                                'NUMPAD_3',
+                                'NUMPAD_5',
                                 'NUMPAD_7',
                                 'NUMPAD_9'} and event.value == 'RELEASE'):
-            
+
                 self.modal_state = 'WAITING'
                 return {'PASS_THROUGH'}
-            
-            
-        if (event.type in {'MIDDLEMOUSE', 
-                                    'NUMPAD_2', 
-                                    'NUMPAD_4', 
+
+
+        if (event.type in {'MIDDLEMOUSE',
+                                    'NUMPAD_2',
+                                    'NUMPAD_4',
                                     'NUMPAD_6',
-                                    'NUMPAD_8', 
-                                    'NUMPAD_1', 
-                                    'NUMPAD_3', 
-                                    'NUMPAD_5', 
+                                    'NUMPAD_8',
+                                    'NUMPAD_1',
+                                    'NUMPAD_3',
+                                    'NUMPAD_5',
                                     'NUMPAD_7',
                                     'NUMPAD_9'} and event.value == 'PRESS'):
-            
+
             self.modal_state = 'NAVIGATING'
-                        
+
             return {'PASS_THROUGH'}
-        
+
         elif event.type in {'ESC'}:
             bpy.types.SpaceView3D.draw_handler_remove(self._handle, 'WINDOW')
             return {'CANCELLED'}
-        
+
         elif event.type == 'RET':
-            
+
             if len(self.align_points) > 3 and len(self.base_points) > 3:
                 bpy.types.SpaceView3D.draw_handler_remove(self._handle, 'WINDOW')
                 self.de_localize(context)
                 self.align_obj(context)
-                
+
                 context.scene.objects.active = self.obj_align
                 self.obj_align.select = True
                 self.obj_base = True
-                
-                return {'FINISHED'}
-            
-        return {'RUNNING_MODAL'}
-            
 
-        
+                return {'FINISHED'}
+
+        return {'RUNNING_MODAL'}
+
+
+
 
     def de_localize(self,context):
-        
+
         override = context.copy()
         override['area'] = self.area_align
         bpy.ops.view3d.localview(override)
         bpy.ops.view3d.view_selected(override)
-        
+
         override['area'] = self.area_base
         bpy.ops.view3d.localview(override)
         bpy.ops.view3d.view_selected(override)
-        
+
     def align_obj(self,context):
-        
+
         if len(self.align_points) != len(self.base_points):
             if len(self.align_points) < len(self.base_points):
-                
+
                 self.base_points = self.base_points[0:len(self.align_points)]
             else:
                 self.align_points = self.align_points[0:len(self.base_points)]
-                
+
         A = np.zeros(shape = [3,len(self.base_points)])
         B = np.zeros(shape = [3,len(self.base_points)])
-        
+
         for i in range(0,len(self.base_points)):
             V1 = self.align_points[i]
             V2 = self.base_points[i]
-    
-            A[0][i], A[1][i], A[2][i] = V1[0], V1[1], V1[2]
-            B[0][i], B[1][i], B[2][i] = V2[0], V2[1], V2[2]  
 
-        
+            A[0][i], A[1][i], A[2][i] = V1[0], V1[1], V1[2]
+            B[0][i], B[1][i], B[2][i] = V2[0], V2[1], V2[2]
+
+
         #test new method
         align_meth = context.user_preferences.addons['object_alignment'].preferences.align_meth
-        
+
         if align_meth == '0': #rigid transform
             M = affine_matrix_from_points(A, B, shear=False, scale=False, usesvd=True)
         elif align_meth == '1': # rot, loc, scale
             M = affine_matrix_from_points(A, B, shear=False, scale=True, usesvd=True)
         #else: #affine
             #M = affine_matrix_from_points(A, B, shear=True, scale=True, usesvd=True)
-            
-        
+
+
         new_mat = Matrix.Identity(4)
         for n in range(0,4):
             for m in range(0,4):
@@ -885,60 +885,60 @@ class OBJECT_OT_align_pick_points(bpy.types.Operator):
 
         self.obj_align.update_tag()
         context.scene.update()
-        
-            
+
+
     def invoke(self, context, event):
         self.modal_state = 'WAITING'
- 
+
         self.start_time = time.time()
         #capture some mouse info to pass to the draw handler
         self.winx = event.mouse_x
         self.winy = event.mouse_y
-            
+
         self.regx = event.mouse_region_x
         self.regy = event.mouse_region_y
-        
+
         self.base_msg = 'Select 3 or more points'
         self.align_msg = 'Select 3 or more points'
-        
-        
+
+
         obj1_name = context.object.name
         obj2_name = [obj for obj in context.selected_objects if obj != context.object][0].name
-        
+
         for ob in context.scene.objects:
             ob.select = False
-        
+
         context.scene.objects.active = None
-        
+
         #I did this stupid method becuase I was unsure
         #if some things were being "sticky" and not
         #remembering where they were
         obj1 = bpy.data.objects[obj1_name]
         obj2 = bpy.data.objects[obj2_name]
-        
+
         for ob in bpy.data.objects:
             if ob.select:
                 print(ob.name)
-                
+
         screen = context.window.screen
         areas = [area.as_pointer() for area in screen.areas]
         for area in screen.areas:
             if area.type == 'VIEW_3D':
-                break 
-                       
+                break
+
         override = context.copy()
         override['area'] = area
-        
+
         self.area_align = area
-        
+
         bpy.ops.screen.area_split(override, direction='VERTICAL', factor=0.5, mouse_x=-100, mouse_y=-100)
-        
+
         context.scene.objects.active = obj1
         obj1.select = True
         obj2.select = False
-        
+
         bpy.ops.view3d.localview(override)
-        
+
         obj1.select = False
         context.scene.objects.active = None
         override = context.copy()
@@ -955,20 +955,20 @@ class OBJECT_OT_align_pick_points(bpy.types.Operator):
                 override['active_object'] = obj2
                 bpy.ops.view3d.localview(override)
                 break
- 
-        
+
+
         self.obj_align = obj1
         self.obj_base = obj2
-        
+
         #hooray, we will raycast in local view!
         self.align_points = []
         self.base_points = []
-        
+
         context.window_manager.modal_handler_add(self)
         self._handle = bpy.types.SpaceView3D.draw_handler_add(draw_callback_px, (self, context), 'WINDOW', 'POST_PIXEL')
         return {'RUNNING_MODAL'}
 
-                    
+
 class OJECT_OT_icp_align(bpy.types.Operator):
     """Uses ICP alignment to iteratevely aligne two objects"""
     bl_idname = "object.align_icp"
@@ -987,18 +987,18 @@ class OJECT_OT_icp_align(bpy.types.Operator):
         align_obj = context.object
         base_obj = [obj for obj in context.selected_objects if obj != align_obj][0]
         align_obj.rotation_mode = 'QUATERNION'
-        
+
         vlist = []
         #figure out if we need to do any inclusion/exclusion
         group_lookup = {g.name: g.index for g in align_obj.vertex_groups}
         if 'icp_include' in align_obj.vertex_groups:
             group = group_lookup['icp_include']
-            
+
             for v in align_obj.data.vertices:
                 for g in v.groups:
                     if g.group == group and g.weight > 0.9:
                         vlist.append(v.index)
-    
+
         elif 'icp_exclude' in align_obj.vertex_groups:
             group = group_lookup['icp_exclude']
             for v in align_obj.data.vertices:
@@ -1013,59 +1013,59 @@ class OJECT_OT_icp_align(bpy.types.Operator):
         #unfortunate way to do this..
         else:
             vlist = [v.index for v in align_obj.data.vertices]
-        
-        
+
+
         thresh = context.user_preferences.addons['object_alignment'].preferences.min_start
         sample = context.user_preferences.addons['object_alignment'].preferences.sample_fraction
         iters = context.user_preferences.addons['object_alignment'].preferences.icp_iterations
         target_d = context.user_preferences.addons['object_alignment'].preferences.target_d
         use_target = context.user_preferences.addons['object_alignment'].preferences.use_target
         factor = round(1/sample)
-        
+
         n = 0
         converged = False
         conv_t_list = [target_d * 2] * 5  #store last 5 translations
         conv_r_list = [None] * 5
-        
+
         while n < iters  and not converged:
-            
-            
+
+
             (A, B, d_stats) = make_pairs(align_obj, base_obj, vlist, thresh, factor, calc_stats = use_target)
-            
-        
+
+
             if align_meth == '0': #rigid transform
                 M = affine_matrix_from_points(A, B, shear=False, scale=False, usesvd=True)
             elif align_meth == '1': # rot, loc, scale
                 M = affine_matrix_from_points(A, B, shear=False, scale=True, usesvd=True)
-            
+
             new_mat = Matrix.Identity(4)
             for y in range(0,4):
                 for z in range(0,4):
                     new_mat[y][z] = M[y][z]
-                
+
             align_obj.matrix_world = align_obj.matrix_world * new_mat
             trans = new_mat.to_translation()
             quat = new_mat.to_quaternion()
-            
+
             align_obj.update_tag()
             context.scene.update()
-        
+
             if d_stats:
                 i = fmod(n,5)
                 conv_t_list[i] = trans.length
                 conv_r_list[i] = abs(quat.angle)
-                
+
                 if all(d < target_d for d in conv_t_list):
                     converged = True
-                    
-                    
+
+
                     print('Converged in %s iterations' % str(n+1))
                     print('Final Translation: %f ' % conv_t_list[i])
                     print('Final Avg Dist: %f' % d_stats[0])
                     print('Final St Dev %f' % d_stats[1])
                     print('Avg last 5 rotation angle: %f' % np.mean(conv_r_list))
-            
-            n += 1   
+
+            n += 1
         time_taken = time.time() - start
         if use_target and not converged:
             print('Maxed out iterations')
@@ -1073,8 +1073,8 @@ class OJECT_OT_icp_align(bpy.types.Operator):
             print('Final Avg Dist: %f' % d_stats[0])
             print('Final St Dev %f' % d_stats[1])
             print('Avg last 5 rotation angle: %f' % np.mean(conv_r_list))
-            
-        print('Aligned obj in %f sec' % time_taken)   
+
+        print('Aligned obj in %f sec' % time_taken)
         return {'FINISHED'}
 
 class OJECT_OT_icp_align_feedback(bpy.types.Operator):
@@ -1084,28 +1084,28 @@ class OJECT_OT_icp_align_feedback(bpy.types.Operator):
     bl_options = {'REGISTER', 'UNDO'}
 
     _timer = None
-    
-    
+
+
     def cancel(self, context):
         wm = context.window_manager
         wm.event_timer_remove(self._timer)
-        
+
     def finish(self, context):
         wm = context.window_manager
         wm.event_timer_remove(self._timer)
-        
+
         time_taken = time.time() - self.start
-        
+
         if self.d_stats:
             if self.use_target and not self.converged:
                 print('Maxed out iterations')
                 print('Final Avg Dist: %f' % self.d_stats[0])
                 print('Final St Dev %f' % self.d_stats[1])
                 print('Avg last 5 rotation angle: %f' % np.mean(self.conv_r_list))
-            
-        print('Aligned obj in %f sec' % time_taken)   
-        return {'FINISHED'}  
-    
+
+        print('Aligned obj in %f sec' % time_taken)
+        return {'FINISHED'}
+
     @classmethod
     def poll(cls, context):
         condition_1 = len(context.selected_objects) == 2
@@ -1114,67 +1114,67 @@ class OJECT_OT_icp_align_feedback(bpy.types.Operator):
 
 
     def iterate(self,context):
-        
+
         (A, B, self.d_stats) = make_pairs(self.align_obj, self.base_obj, self.vlist, self.thresh, self.sample_factor, calc_stats = self.use_target)
-            
-        
+
+
         if self.align_meth == '0': #rigid transform
             M = affine_matrix_from_points(A, B, shear=False, scale=False, usesvd=True)
         elif self.align_meth == '1': # rot, loc, scale
             M = affine_matrix_from_points(A, B, shear=False, scale=True, usesvd=True)
-        
+
         new_mat = Matrix.Identity(4)
         for y in range(0,4):
             for z in range(0,4):
                 new_mat[y][z] = M[y][z]
-            
+
         self.align_obj.matrix_world = self.align_obj.matrix_world * new_mat
         trans = new_mat.to_translation()
         quat = new_mat.to_quaternion()
-        
+
         self.align_obj.update_tag()
         if self.d_stats:
             i = fmod(self.total_iters,5)
             self.conv_t_list[i] = trans.length
             self.conv_r_list[i] = abs(quat.angle)
-            
+
             if all(d < self.target_d for d in self.conv_t_list):
                 self.converged = True
-                
+
                 print('Converged in %s iterations' % str(self.total_iters+1))
                 print('Final Translation: %f ' % self.conv_t_list[i])
                 print('Final Avg Dist: %f' % self.d_stats[0])
                 print('Final St Dev %f' % self.d_stats[1])
                 print('Avg last 5 rotation angle: %f' % np.mean(self.conv_r_list))
-        
-                
-        
-        
+
+
+
+
     def invoke(self,context, event):
-        
+
         wm = context.window_manager
         self._timer = wm.event_timer_add(0.01, context.window)
         wm.modal_handler_add(self)
-        
-        
-        
+
+
+
         self.align_meth = context.user_preferences.addons['object_alignment'].preferences.align_meth
         self.start = time.time()
         self.align_obj = context.object
         self.base_obj = [obj for obj in context.selected_objects if obj != self.align_obj][0]
         self.align_obj.rotation_mode = 'QUATERNION'
-        
+
         self.vlist = []
         #figure out if we need to do any inclusion/exclusion
         group_lookup = {g.name: g.index for g in self.align_obj.vertex_groups}
         if 'icp_include' in self.align_obj.vertex_groups:
             group = group_lookup['icp_include']
-            
+
             for v in self.align_obj.data.vertices:
                 for g in v.groups:
                     if g.group == group and g.weight > 0.9:
                         self.vlist.append(v.index)
-    
+
         elif 'icp_exclude' in self.align_obj.vertex_groups:
             group = group_lookup['icp_exclude']
             for v in self.align_obj.data.vertices:
@@ -1190,8 +1190,8 @@ class OJECT_OT_icp_align_feedback(bpy.types.Operator):
         else:
             self.vlist = [v.index for v in self.align_obj.data.vertices]
             #vlist = [range(0,len(align_obj.data.vertices]  #perhaps much smarter
-        
-        
+
+
         self.thresh = context.user_preferences.addons['object_alignment'].preferences.min_start
         self.sample_fraction = context.user_preferences.addons['object_alignment'].preferences.sample_fraction
         self.iters = context.user_preferences.addons['object_alignment'].preferences.icp_iterations
@@ -1199,17 +1199,17 @@ class OJECT_OT_icp_align_feedback(bpy.types.Operator):
         self.use_target = context.user_preferences.addons['object_alignment'].preferences.use_target
         self.sample_factor = round(1/self.sample_fraction)
         self.redraw_frequency = context.user_preferences.addons['object_alignment'].preferences.redraw_frequency
-        
+
         self.total_iters = 0
         self.converged = False
         self.conv_t_list = [self.target_d * 2] * 5  #store last 5 translations
         self.conv_r_list = [None] * 5
-        
-        
+
+
         return {'RUNNING_MODAL'}
-        
+
     def modal(self, context, event):
-        
+
         if event.type in {'RIGHTMOUSE', 'ESC'}:
             return self.cancel(context)
 
@@ -1218,14 +1218,14 @@ class OJECT_OT_icp_align_feedback(bpy.types.Operator):
             #do this many iterations, then redraw
             for i in range(0,self.redraw_frequency):
                 if self.total_iters <= self.iters and not self.converged:
-                    self.iterate(context)               
+                    self.iterate(context)
                     self.total_iters += 1
-            
+
                 else:
                     return self.finish(context)
 
             return {'RUNNING_MODAL'}
-        
+
         return {'PASS_THROUGH'}
 def register():
     bpy.utils.register_class(AlignmentAddonPreferences)
@@ -1237,7 +1237,7 @@ def register():
     bpy.utils.register_class(OJECT_OT_align_exclude_clear)
     bpy.utils.register_class(OBJECT_OT_align_pick_points)
     bpy.utils.register_class(ComplexAlignmentPanel)
-    
+
 
 
 def unregister():
