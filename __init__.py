@@ -1,8 +1,62 @@
 '''
-Created on Apr 14, 2014
 
-@author: Patrick
+
+Copyright (c) 2014-2015 Patrick Moore
+patrick.moore.bu@gmail.com
+
+
+Created by Patrick Moore for Blender, with adaptation of works by Christoph Gohlke, Nghia Ho
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+
+
+Parts of this code are adapted from transformations.py by Christoph Gohlke
+http://www.lfd.uci.edu/~gohlke/code/transformations.py
+
+The following copyright and information is attached
+# Copyright (c) 2006-2015, Christoph Gohlke
+# Copyright (c) 2006-2015, The Regents of the University of California
+# Produced at the Laboratory for Fluorescence Dynamics
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+# * Redistributions of source code must retain the above copyright
+#   notice, this list of conditions and the following disclaimer.
+# * Redistributions in binary form must reproduce the above copyright
+#   notice, this list of conditions and the following disclaimer in the
+#   documentation and/or other materials provided with the distribution.
+# * Neither the name of the copyright holders nor the names of any
+#   contributors may be used to endorse or promote products derived
+#   from this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED.  IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
 '''
+
+
 from numpy.ma.core import fmod
 bl_info = {
     "name": "Complex Alignment",
@@ -64,7 +118,6 @@ def draw_3d_points(context, points, color, size):
     bgl.glEnd()   
     return
 
-
 def draw_3d_points_revised(context, points, color, size):
     region = context.region
     region3d = context.space_data.region_3d
@@ -108,7 +161,7 @@ def draw_3d_text(context, font_id, text, vec):
         blf.position(font_id, x + 3.0, y - 4.0, 0.0)
         blf.draw(font_id, text)    
 
-
+#http://www.lfd.uci.edu/~gohlke/code/transformations.py
 def quaternion_matrix(quaternion):
     """Return homogeneous rotation matrix from quaternion.
 
@@ -135,7 +188,7 @@ def quaternion_matrix(quaternion):
         [    q[1, 3]-q[2, 0],     q[2, 3]+q[1, 0], 1.0-q[1, 1]-q[2, 2], 0.0],
         [                0.0,                 0.0,                 0.0, 1.0]])
     
-    
+#http://www.lfd.uci.edu/~gohlke/code/transformations.py    
 def vector_norm(data, axis=None, out=None):
     """Return length, i.e. Euclidean norm, of ndarray along axis.
 
@@ -173,7 +226,8 @@ def vector_norm(data, axis=None, out=None):
         data *= data
         np.sum(data, axis=axis, out=out)
         np.sqrt(out, out)
-        
+
+#http://www.lfd.uci.edu/~gohlke/code/transformations.py        
 def affine_matrix_from_points(v0, v1, shear=True, scale=True, usesvd=True):
     """Return affine transform matrix to register two point sets.
 
@@ -290,6 +344,7 @@ def affine_matrix_from_points(v0, v1, shear=True, scale=True, usesvd=True):
 
 
 #Preferences
+
 class AlignmentAddonPreferences(AddonPreferences):
     # this must match the addon name, use '__package__'
     # when defining this in a submodule of a python package.
@@ -354,7 +409,6 @@ class AlignmentAddonPreferences(AddonPreferences):
         layout.prop(self, "target_d")
         layout.prop(self, "align_meth")
         
-
 class ComplexAlignmentPanel(bpy.types.Panel):
     """UI for ICP Alignment"""
     #bl_category = "Alignment"
@@ -421,7 +475,6 @@ class ComplexAlignmentPanel(bpy.types.Panel):
         row.prop(settings, 'target_d')
         
             
-
 #modified from http://nghiaho.com/?page_id=671    
 def rigid_transform_3D(A, B):
     assert len(A) == len(B)
@@ -961,8 +1014,7 @@ class OBJECT_OT_align_pick_points(bpy.types.Operator):
         context.window_manager.modal_handler_add(self)
         self._handle = bpy.types.SpaceView3D.draw_handler_add(draw_callback_px, (self, context), 'WINDOW', 'POST_PIXEL')
         return {'RUNNING_MODAL'}
-
-                    
+                   
 class OJECT_OT_icp_align(bpy.types.Operator):
     """Uses ICP alignment to iteratevely aligne two objects"""
     bl_idname = "object.align_icp"
