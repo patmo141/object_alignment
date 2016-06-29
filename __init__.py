@@ -1,7 +1,7 @@
 '''
 
 
-Copyright (c) 2014-2015 Patrick Moore
+Copyright (c) 2014-2016 Patrick Moore
 patrick.moore.bu@gmail.com
 
 
@@ -57,7 +57,7 @@ The following copyright and information is attached
 '''
 
 
-from numpy.ma.core import fmod
+
 bl_info = {
     "name": "Complex Alignment",
     "author": "Patrick Moore",
@@ -71,8 +71,11 @@ bl_info = {
 
 
 import numpy as np
+from numpy.ma.core import fmod
 import math
 import time
+
+
 import bpy
 import blf
 import bgl
@@ -83,84 +86,11 @@ from bpy_extras.object_utils import AddObjectHelper, object_data_add
 from bpy_extras import view3d_utils
 from mathutils import Vector, Matrix, Quaternion
 
+from .utilities import *
+
 # epsilon for testing whether a number is close to zero
 _EPS = np.finfo(float).eps * 4.0
-
-def tag_redraw_all_view3d():
-    context = bpy.context
-
-    # Py cant access notifers
-    for window in context.window_manager.windows:
-        for area in window.screen.areas:
-            if area.type == 'VIEW_3D':
-                for region in area.regions:
-                    if region.type == 'WINDOW':
-                        region.tag_redraw()
-                        
-def draw_3d_points(context, points, color, size):
-    '''
-    draw a bunch of dots
-    args:
-        points: a list of tuples representing x,y SCREEN coordinate eg [(10,30),(11,31),...]
-        color: tuple (r,g,b,a)
-        size: integer? maybe a float
-    '''
-    points_2d = [view3d_utils.location_3d_to_region_2d(context.region, context.space_data.region_3d, loc) for loc in points]
-
-    bgl.glColor4f(*color)
-    bgl.glPointSize(size)
-    bgl.glBegin(bgl.GL_POINTS)
-    for coord in points_2d:
-        #TODO:  Debug this problem....perhaps loc_3d is returning points off of the screen.
-        if coord:
-            bgl.glVertex2f(*coord)  
-
-    bgl.glEnd()   
-    return
-
-def draw_3d_points_revised(context, points, color, size):
-    region = context.region
-    region3d = context.space_data.region_3d
-    
-    
-    region_mid_width = region.width / 2.0
-    region_mid_height = region.height / 2.0
-    
-    perspective_matrix = region3d.perspective_matrix.copy()
-    
-    bgl.glColor4f(*color)
-    bgl.glPointSize(size)
-    bgl.glBegin(bgl.GL_POINTS)
-    
-    for vec in points:
-    
-        vec_4d = perspective_matrix * vec.to_4d()
-        if vec_4d.w > 0.0:
-            x = region_mid_width + region_mid_width * (vec_4d.x / vec_4d.w)
-            y = region_mid_height + region_mid_height * (vec_4d.y / vec_4d.w)
-            
-            bgl.glVertex3f(x, y, 0)
-
-            
-    bgl.glEnd()
-
-def draw_3d_text(context, font_id, text, vec):
-    region = context.region
-    region3d = context.space_data.region_3d
-    
-    
-    region_mid_width = region.width / 2.0
-    region_mid_height = region.height / 2.0
-    
-    perspective_matrix = region3d.perspective_matrix.copy()
-    vec_4d = perspective_matrix * vec.to_4d()
-    if vec_4d.w > 0.0:
-        x = region_mid_width + region_mid_width * (vec_4d.x / vec_4d.w)
-        y = region_mid_height + region_mid_height * (vec_4d.y / vec_4d.w)
-
-        blf.position(font_id, x + 3.0, y - 4.0, 0.0)
-        blf.draw(font_id, text)    
-
+                 
 #http://www.lfd.uci.edu/~gohlke/code/transformations.py
 def quaternion_matrix(quaternion):
     """Return homogeneous rotation matrix from quaternion.
@@ -189,6 +119,7 @@ def quaternion_matrix(quaternion):
         [                0.0,                 0.0,                 0.0, 1.0]])
     
 #http://www.lfd.uci.edu/~gohlke/code/transformations.py    
+
 def vector_norm(data, axis=None, out=None):
     """Return length, i.e. Euclidean norm, of ndarray along axis.
 
@@ -341,9 +272,103 @@ def affine_matrix_from_points(v0, v1, shear=True, scale=True, usesvd=True):
     M = np.dot(np.linalg.inv(M1), np.dot(M, M0))
     M /= M[ndims, ndims]
     return M
+ 
+          
+#modified from http://nghiaho.com/?page_id=671    
+def rigid_transform_3D(A, B):
+    assert len(A) == len(B)
 
+    N = A.shape[0]; # total points
 
-#Preferences
+    centroid_A = np.mean(A, axis=0)
+    centroid_B = np.mean(B, axis=0)
+    
+    # centre the points
+    AA = A - np.tile(centroid_A, (N, 1))
+    BB = B - np.tile(centroid_B, (N, 1))
+
+    # dot is matrix multiplication for array
+    H = np.transpose(AA) * BB
+
+    U, S, Vt = np.linalg.svd(H)
+
+    R = Vt.T * U.T
+
+    # special reflection case
+    if np.linalg.det(R) < 0:
+        print("Reflection detected")
+        Vt[2,:] *= -1
+        R = Vt.T * U.T
+
+    t = -R*centroid_A.T + centroid_B.T
+
+    return R, t
+
+def make_pairs(align_obj, base_obj, vlist, thresh, sample = 0, calc_stats = False):
+    '''
+    vlist is a list of vertex indices in the align object to use
+    for alignment.  Will be in align_obj local space!
+    '''
+    
+    mx1 = align_obj.matrix_world
+    mx2 = base_obj.matrix_world
+    
+    imx1 = mx1.inverted()
+    imx2 = mx2.inverted()
+    
+    verts1 = []
+    verts2 = []
+    if calc_stats:
+        dists = []
+    
+    #downsample if needed
+    if sample > 1:
+        vlist = vlist[0::sample]
+        
+    if thresh > 0:
+        #filter data based on an initial starting dist
+        #eacg time in the routine..the limit should go down
+        for vert_ind in vlist:
+            
+            vert = align_obj.data.vertices[vert_ind]
+            #closest point for point clouds.  Local space of base obj
+            co_find = imx2 * (mx1 * vert.co)
+            
+            #closest surface point for triangle mesh
+            #this is set up for a  well modeled aligning object with
+            #with a noisy or scanned base object
+            if bversion() < '002.077.00':
+                co1, normal, face_index = base_obj.closest_point_on_mesh(co_find)
+            else:
+                res, co1, normal, face_index = base_obj.closest_point_on_mesh(co_find)
+            
+            dist = (mx2 * co_find - mx2 * co1).length    
+            if face_index != -1 and dist < thresh:
+                verts1.append(vert.co)
+                verts2.append(imx1 * (mx2 * co1))
+                if calc_stats:
+                    dists.append(dist)
+        
+        #later we will pre-process data to get nice data sets
+        #eg...closest points after initial guess within a certain threshold
+        #for now, take the verts and make them a numpy array
+        A = np.zeros(shape = [3,len(verts1)])
+        B = np.zeros(shape = [3,len(verts1)])
+        
+        for i in range(0,len(verts1)):
+            V1 = verts1[i]
+            V2 = verts2[i]
+    
+            A[0][i], A[1][i], A[2][i] = V1[0], V1[1], V1[2]
+            B[0][i], B[1][i], B[2][i] = V2[0], V2[1], V2[2]
+        
+        if calc_stats:
+            avg_dist = np.mean(dists)
+            dev = np.std(dists)
+            d_stats = [avg_dist, dev]
+        else:
+            d_stats = None
+        return A, B, d_stats
 
 class AlignmentAddonPreferences(AddonPreferences):
     # this must match the addon name, use '__package__'
@@ -473,54 +498,7 @@ class ComplexAlignmentPanel(bpy.types.Panel):
         row = layout.row()
         row.prop(settings, 'use_target')
         row.prop(settings, 'target_d')
-        
-            
-#modified from http://nghiaho.com/?page_id=671    
-def rigid_transform_3D(A, B):
-    assert len(A) == len(B)
-
-    N = A.shape[0]; # total points
-
-    centroid_A = np.mean(A, axis=0)
-    centroid_B = np.mean(B, axis=0)
-    
-    # centre the points
-    AA = A - np.tile(centroid_A, (N, 1))
-    BB = B - np.tile(centroid_B, (N, 1))
-
-    # dot is matrix multiplication for array
-    H = np.transpose(AA) * BB
-
-    U, S, Vt = np.linalg.svd(H)
-
-    R = Vt.T * U.T
-
-    # special reflection case
-    if np.linalg.det(R) < 0:
-        print("Reflection detected")
-        Vt[2,:] *= -1
-        R = Vt.T * U.T
-
-    t = -R*centroid_A.T + centroid_B.T
-
-    return R, t
-
-def obj_ray_cast(obj, matrix, ray_origin, ray_target):
-    """Wrapper for ray casting that moves the ray into object space"""
-
-    # get the ray relative to the object
-    matrix_inv = matrix.inverted()
-    ray_origin_obj = matrix_inv * ray_origin
-    ray_target_obj = matrix_inv * ray_target
-
-    # cast the ray
-    hit, normal, face_index = obj.ray_cast(ray_origin_obj, ray_target_obj)
-
-    if face_index != -1:
-        return hit, normal, face_index
-    else:
-        return None, None, None
-        
+                
 class OJECT_OT_align_add_include(bpy.types.Operator):
     """Adds a vertex group and puts in weight paint mode"""
     bl_idname = "object.align_include"
@@ -624,82 +602,14 @@ class OJECT_OT_align_exclude_clear(bpy.types.Operator):
             
         return {'FINISHED'}
     
-
-def make_pairs(align_obj, base_obj, vlist, thresh, sample = 0, calc_stats = False):
-    '''
-    vlist is a list of vertex indices in the align object to use
-    for alignment.  Will be in align_obj local space!
-    '''
-    
-    mx1 = align_obj.matrix_world
-    mx2 = base_obj.matrix_world
-    
-    imx1 = mx1.inverted()
-    imx2 = mx2.inverted()
-    
-    verts1 = []
-    verts2 = []
-    if calc_stats:
-        dists = []
-    
-    #downsample if needed
-    if sample > 1:
-        vlist = vlist[0::sample]
-        
-    if thresh > 0:
-        #filter data based on an initial starting dist
-        #eacg time in the routine..the limit should go down
-        for vert_ind in vlist:
-            
-            vert = align_obj.data.vertices[vert_ind]
-            #closest point for point clouds.  Local space of base obj
-            co_find = imx2 * (mx1 * vert.co)
-            
-            #closest surface point for triangle mesh
-            #this is set up for a  well modeled aligning object with
-            #with a noisy or scanned base object
-            co1, normal, face_index = base_obj.closest_point_on_mesh(co_find)
-            
-            dist = (mx2 * co_find - mx2 * co1).length
-            if face_index != -1 and dist < thresh:
-                verts1.append(vert.co)
-                verts2.append(imx1 * (mx2 * co1))
-                if calc_stats:
-                    dists.append(dist)
-        
-        #later we will pre-process data to get nice data sets
-        #eg...closest points after initial guess within a certain threshold
-        #for now, take the verts and make them a numpy array
-        A = np.zeros(shape = [3,len(verts1)])
-        B = np.zeros(shape = [3,len(verts1)])
-        
-        for i in range(0,len(verts1)):
-            V1 = verts1[i]
-            V2 = verts2[i]
-    
-            A[0][i], A[1][i], A[2][i] = V1[0], V1[1], V1[2]
-            B[0][i], B[1][i], B[2][i] = V2[0], V2[1], V2[2]
-        
-        if calc_stats:
-            avg_dist = np.mean(dists)
-            dev = np.std(dists)
-            d_stats = [avg_dist, dev]
-        else:
-            d_stats = None
-        return A, B, d_stats
-        
-
 def draw_callback_px(self, context):
     
-
     font_id = 0  # XXX, need to find out how best to get this.
 
     # draw some text
     blf.position(font_id, 10, 10, 0)
     blf.size(font_id, 20, 72)  
         
-    delta = time.time() - self.start_time
-    
     if context.area.x == self.area_align.x:
         blf.draw(font_id, "Align: "+ self.align_msg)
         points = [self.obj_align.matrix_world * p for p in self.align_points]
@@ -778,8 +688,7 @@ class OBJECT_OT_align_pick_points(bpy.types.Operator):
                 ray_target = ray_origin + (view_vector * ray_max)
             
                 print('in the align object window')
-                hit, normal, face_index = obj_ray_cast(self.obj_align, self.obj_align.matrix_world, ray_origin - (.1 * ray_max * view_vector), ray_target)
-                
+                (d, (ok,hit, normal, face_index)) = ray_cast_region2d(region, rv3d, coord, self.obj_align)
                 if hit:
                     print('hit! align_obj %s' % self.obj_align.name)
                     #local space of align object
@@ -800,9 +709,8 @@ class OBJECT_OT_align_pick_points(bpy.types.Operator):
                 ray_target = ray_origin + (view_vector * ray_max)
                 
                 print('in the base object window')
-                hit, normal, face_index = obj_ray_cast(self.obj_base, self.obj_base.matrix_world, ray_origin - (.1 * ray_max * view_vector), ray_target)
-                
-                if hit:
+                (d, (ok,hit, normal, face_index)) = ray_cast_region2d(region, rv3d, coord, self.obj_base)
+                if ok:
                     print('hit! base_obj %s' % self.obj_base.name)
                     #points in local space of align object
                     self.base_points.append(self.obj_align.matrix_world.inverted() * self.obj_base.matrix_world * hit)    
