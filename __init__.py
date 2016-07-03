@@ -85,6 +85,7 @@ from bpy.types import Operator, AddonPreferences
 from bpy_extras.object_utils import AddObjectHelper, object_data_add
 from bpy_extras import view3d_utils
 from mathutils import Vector, Matrix, Quaternion
+from mathutils.bvhtree import BVHTree
 
 from .utilities import *
 
@@ -304,7 +305,7 @@ def rigid_transform_3D(A, B):
 
     return R, t
 
-def make_pairs(align_obj, base_obj, vlist, thresh, sample = 0, calc_stats = False):
+def make_pairs(align_obj, base_obj, base_bvh, vlist, thresh, sample = 0, calc_stats = False):
     '''
     vlist is a list of vertex indices in the align object to use
     for alignment.  Will be in align_obj local space!
@@ -337,12 +338,16 @@ def make_pairs(align_obj, base_obj, vlist, thresh, sample = 0, calc_stats = Fals
             #closest surface point for triangle mesh
             #this is set up for a  well modeled aligning object with
             #with a noisy or scanned base object
-            if bversion() < '002.077.00':
-                co1, normal, face_index = base_obj.closest_point_on_mesh(co_find)
+            if bversion() <= '002.076.00':
+                #co1, normal, face_index = base_obj.closest_point_on_mesh(co_find)
+                co1, n, face_index, d = base_bvh.find(co_find)
             else:
-                res, co1, normal, face_index = base_obj.closest_point_on_mesh(co_find)
+                #res, co1, normal, face_index = base_obj.closest_point_on_mesh(co_find)
+                co1, n, face_index, d = base_bvh.find_nearest(co_find)
             
-            dist = (mx2 * co_find - mx2 * co1).length    
+            dist = (mx2 * co_find - mx2 * co1).length 
+            #d is now returned by bvh.find
+            #dist = mx2.to_scale() * d
             if face_index != -1 and dist < thresh:
                 verts1.append(vert.co)
                 verts2.append(imx1 * (mx2 * co1))
@@ -940,6 +945,7 @@ class OJECT_OT_icp_align(bpy.types.Operator):
         start = time.time()
         align_obj = context.object
         base_obj = [obj for obj in context.selected_objects if obj != align_obj][0]
+        base_bvh = BVHTree.FromObject(base_obj, context.scene)
         align_obj.rotation_mode = 'QUATERNION'
         
         vlist = []
@@ -984,7 +990,7 @@ class OJECT_OT_icp_align(bpy.types.Operator):
         while n < iters  and not converged:
             
             
-            (A, B, d_stats) = make_pairs(align_obj, base_obj, vlist, thresh, factor, calc_stats = use_target)
+            (A, B, d_stats) = make_pairs(align_obj, base_obj, base_bvh, vlist, thresh, factor, calc_stats = use_target)
             
         
             if align_meth == '0': #rigid transform
