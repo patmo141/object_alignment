@@ -3,6 +3,7 @@ Created on Jun 28, 2016
 
 @author: Patrick
 '''
+import os
 
 import bpy
 import bgl
@@ -11,6 +12,27 @@ import blf
 from mathutils import Vector, Matrix
 from bpy_extras.view3d_utils import location_3d_to_region_2d, region_2d_to_vector_3d
 from bpy_extras.view3d_utils import region_2d_to_location_3d, region_2d_to_origin_3d
+
+#Borrowed from retopoflow @CGCookie, Jonathan Wiliamson, Jon Denning, Patrick Moore
+def get_settings():
+    if not get_settings.cached_settings:
+        addons = bpy.context.user_preferences.addons
+        #frame = inspect.currentframe()
+        #frame.f_code.co_filename
+        folderpath = os.path.dirname(os.path.abspath(__file__))
+        while folderpath:
+            folderpath,foldername = os.path.split(folderpath)
+            if foldername in {'lib','addons'}: continue
+            if foldername in addons: break
+        else:
+            assert False, 'Could not find non-"lib" folder'
+        
+        get_settings.cached_settings = addons[foldername].preferences
+   
+    return get_settings.cached_settings
+
+get_settings.cached_settings = None
+
 
 def bversion():
     bversion = '%03d.%03d.%03d' % (bpy.app.version[0],bpy.app.version[1],bpy.app.version[2])

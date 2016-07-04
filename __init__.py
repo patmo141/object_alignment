@@ -310,7 +310,6 @@ def make_pairs(align_obj, base_obj, base_bvh, vlist, thresh, sample = 0, calc_st
     vlist is a list of vertex indices in the align object to use
     for alignment.  Will be in align_obj local space!
     '''
-    
     mx1 = align_obj.matrix_world
     mx2 = base_obj.matrix_world
     
@@ -404,7 +403,7 @@ class AlignmentAddonPreferences(AddonPreferences):
     
     min_start = FloatProperty(
             name="Minimum Starting Dist",
-            description = "Only verts closer than this distance will be included in each iteration",
+            description = "Only verts closer than this distance will be used in each iteration",
             default = 0.5,
             min = 0,
             max = 20)
@@ -447,7 +446,8 @@ class ComplexAlignmentPanel(bpy.types.Panel):
     bl_region_type = 'TOOLS'
 
     def draw(self, context):
-        settings = context.user_preferences.addons['object_alignment'].preferences
+        settings = get_settings()
+        
         layout = self.layout
 
         
@@ -498,7 +498,8 @@ class ComplexAlignmentPanel(bpy.types.Panel):
         
         row = layout.row()
         row.operator('object.align_icp_redraw')
-        
+        row = layout.row()
+        row.prop(settings, 'redraw_frequency')
         row = layout.row()
         row.prop(settings, 'icp_iterations')
         row = layout.row()
@@ -529,8 +530,11 @@ class OJECT_OT_align_add_include(bpy.types.Operator):
     def execute(self, context):
         
         if 'icp_include' not in context.object.vertex_groups:
-            
             new_group = context.object.vertex_groups.new(name = 'icp_include')
+        #remove the exclude group
+        if 'icp_exclude' in context.object.vertex_groups:
+            g = context.object.vertex_groups['icp_exclude']
+            context.object.vertex_groups.remove(g)
         
         bpy.ops.object.vertex_group_set_active(group = 'icp_include')
             
@@ -581,7 +585,10 @@ class OJECT_OT_align_add_exclude(bpy.types.Operator):
         
         if 'icp_exclude' not in context.object.vertex_groups:
             new_group = context.object.vertex_groups.new(name = 'icp_exclude')
-        
+        #remove the exclude group
+        if 'icp_include' in context.object.vertex_groups:
+            g = context.object.vertex_groups['icp_include']
+            context.object.vertex_groups.remove(g)
         bpy.ops.object.vertex_group_set_active(group = 'icp_exclude')
             
         if context.mode != 'PAINT_WEIGHT':
@@ -830,7 +837,8 @@ class OBJECT_OT_align_pick_points(bpy.types.Operator):
 
         
         #test new method
-        align_meth = context.user_preferences.addons['object_alignment'].preferences.align_meth
+        settings = get_settings()
+        align_meth = settings.align_meth
         
         if align_meth == '0': #rigid transform
             M = affine_matrix_from_points(A, B, shear=False, scale=False, usesvd=True)
@@ -947,7 +955,8 @@ class OJECT_OT_icp_align(bpy.types.Operator):
         return condition_1 and condition_1
 
     def execute(self, context):
-        align_meth = context.user_preferences.addons['object_alignment'].preferences.align_meth
+        settings = get_settings()
+        align_meth = settings.align_meth
         start = time.time()
         align_obj = context.object
         base_obj = [obj for obj in context.selected_objects if obj != align_obj][0]
@@ -980,12 +989,12 @@ class OJECT_OT_icp_align(bpy.types.Operator):
         else:
             vlist = [v.index for v in align_obj.data.vertices]
         
-        
-        thresh = context.user_preferences.addons['object_alignment'].preferences.min_start
-        sample = context.user_preferences.addons['object_alignment'].preferences.sample_fraction
-        iters = context.user_preferences.addons['object_alignment'].preferences.icp_iterations
-        target_d = context.user_preferences.addons['object_alignment'].preferences.target_d
-        use_target = context.user_preferences.addons['object_alignment'].preferences.use_target
+        settings = get_settings()
+        thresh = settings.min_start
+        sample = settings.sample_fraction
+        iters = settings.icp_iterations
+        target_d = settings.target_d
+        use_target = settings.use_target
         factor = round(1/sample)
         
         n = 0
@@ -1081,7 +1090,7 @@ class OJECT_OT_icp_align_feedback(bpy.types.Operator):
 
     def iterate(self,context):
         
-        (A, B, self.d_stats) = make_pairs(self.align_obj, self.base_obj, self.vlist, self.thresh, self.sample_factor, calc_stats = self.use_target)
+        (A, B, self.d_stats) = make_pairs(self.align_obj, self.base_obj, self.base_bvh, self.vlist, self.thresh, self.sample_factor, calc_stats = self.use_target)
             
         
         if self.align_meth == '0': #rigid transform
@@ -1123,11 +1132,12 @@ class OJECT_OT_icp_align_feedback(bpy.types.Operator):
         wm.modal_handler_add(self)
         
         
-        
-        self.align_meth = context.user_preferences.addons['object_alignment'].preferences.align_meth
+        settings = get_settings()
+        self.align_meth = settings.align_meth
         self.start = time.time()
         self.align_obj = context.object
         self.base_obj = [obj for obj in context.selected_objects if obj != self.align_obj][0]
+        self.base_bvh = BVHTree.FromObject(self.base_obj, context.scene)
         self.align_obj.rotation_mode = 'QUATERNION'
         
         self.vlist = []
@@ -1157,14 +1167,14 @@ class OJECT_OT_icp_align_feedback(bpy.types.Operator):
             self.vlist = [v.index for v in self.align_obj.data.vertices]
             #vlist = [range(0,len(align_obj.data.vertices]  #perhaps much smarter
         
-        
-        self.thresh = context.user_preferences.addons['object_alignment'].preferences.min_start
-        self.sample_fraction = context.user_preferences.addons['object_alignment'].preferences.sample_fraction
-        self.iters = context.user_preferences.addons['object_alignment'].preferences.icp_iterations
-        self.target_d = context.user_preferences.addons['object_alignment'].preferences.target_d
-        self.use_target = context.user_preferences.addons['object_alignment'].preferences.use_target
+        settings = get_settings()
+        self.thresh = settings.min_start
+        self.sample_fraction = settings.sample_fraction
+        self.iters = settings.icp_iterations
+        self.target_d = settings.target_d
+        self.use_target = settings.use_target
         self.sample_factor = round(1/self.sample_fraction)
-        self.redraw_frequency = context.user_preferences.addons['object_alignment'].preferences.redraw_frequency
+        self.redraw_frequency = settings.redraw_frequency
         
         self.total_iters = 0
         self.converged = False
