@@ -1,11 +1,9 @@
 '''
-
-
 Copyright (c) 2014-2016 Patrick Moore
 patrick.moore.bu@gmail.com
 
-
 Created by Patrick Moore for Blender, with adaptation of works by Christoph Gohlke, Nghia Ho
+    With tons of help from CoDEmanX
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -625,7 +623,10 @@ def draw_callback_px(self, context):
     font_id = 0  # XXX, need to find out how best to get this.
 
     # draw some text
-    blf.position(font_id, 10, 10, 0)
+    y = context.region.height
+    dims = blf.dimensions(0, 'A')
+    
+    blf.position(font_id, 10, y - 10 - dims[1], 0)
     blf.size(font_id, 20, 72)  
         
     if context.area.x == self.area_align.x:
@@ -789,7 +790,7 @@ class OBJECT_OT_align_pick_points(bpy.types.Operator):
         
         elif event.type == 'RET':
             
-            if len(self.align_points) > 3 and len(self.base_points) > 3:
+            if len(self.align_points) >= 3 and len(self.base_points) >= 3 and len(self.align_points) == len(self.base_points):
                 bpy.types.SpaceView3D.draw_handler_remove(self._handle, 'WINDOW')
                 self.de_localize(context)
                 self.align_obj(context)
@@ -816,6 +817,13 @@ class OBJECT_OT_align_pick_points(bpy.types.Operator):
         bpy.ops.view3d.localview(override)
         bpy.ops.view3d.view_selected(override)
         
+        #Crash Blender?       
+        bpy.ops.screen.area_join(min_x=self.area_align.x,min_y=self.area_align.y, max_x=self.area_base.x, max_y=self.area_base.y)
+        bpy.ops.view3d.toolshelf()
+        
+        #ret = bpy.ops.screen.area_join(min_x=area_base.x,min_y=area_base.y, max_x=area_align.x, max_y=area_align.y)
+            
+    
     def align_obj(self,context):
         
         if len(self.align_points) != len(self.base_points):
@@ -899,13 +907,15 @@ class OBJECT_OT_align_pick_points(bpy.types.Operator):
         for area in screen.areas:
             if area.type == 'VIEW_3D':
                 break 
-                       
+        
+        bpy.ops.view3d.toolshelf() #close the first toolshelf               
         override = context.copy()
         override['area'] = area
         
         self.area_align = area
         
         bpy.ops.screen.area_split(override, direction='VERTICAL', factor=0.5, mouse_x=-100, mouse_y=-100)
+        #bpy.ops.view3d.toolshelf() #close the 2nd toolshelf
         
         context.scene.objects.active = obj1
         obj1.select = True
