@@ -626,7 +626,7 @@ def draw_callback_px(self, context):
     y = context.region.height
     dims = blf.dimensions(0, 'A')
     
-    blf.position(font_id, 10, y - 10 - dims[1], 0)
+    blf.position(font_id, 10, y - 20 - dims[1], 0)
     blf.size(font_id, 20, 72)  
         
     if context.area.x == self.area_align.x:
