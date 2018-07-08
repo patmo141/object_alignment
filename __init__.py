@@ -1094,7 +1094,7 @@ class OJECT_OT_icp_align_feedback(bpy.types.Operator):
     @classmethod
     def poll(cls, context):
         condition_1 = len(context.selected_objects) == 2
-        condition_2 = context.object.type == 'MESH'
+        condition_2 = context.object and context.object.type == 'MESH'
         return condition_1 and condition_2
 
 
