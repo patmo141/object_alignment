@@ -23,7 +23,7 @@ from math import sqrt, acos, cos, sin
 from typing import List
 
 import bgl
-from mathutils import Matrix, Vector
+from mathutils import Matrix, Vector, Quaternion
 from bmesh.types import BMVert
 from mathutils.geometry import intersect_line_plane, intersect_point_tri
 
@@ -57,6 +57,32 @@ class Entity3D:
         return True
 
 
+class VecUtils(Vector):
+    def normalize(self):
+        super().normalize()
+        return self
+
+    def as_vector(self):
+        return Vector(self)
+
+    def from_vector(self, v):
+        self.x, self.y, self.z = v
+
+    def perpendicular_direction(self):
+        q0 = Quaternion(Vector((42, 1.618034, 2.71828)), 1.5707963)
+        q1 = Quaternion(Vector((1.41421, 2, 1.73205)), -1.5707963)
+        v = q1 * q0 * self
+        return Direction(self.cross(v))
+
+    def cross(self, other):
+        t = type(other)
+        if t is Vector:
+            return Vec(super().cross(other))
+        if t is Vec or t is Direction or t is Normal:
+            return Vec(super().cross(Vector(other)))
+        assert False, 'unhandled type of other: %s (%s)' % (str(other), str(t))
+
+
 class Vec2D(Vector, Entity2D):
     @stats_wrapper
     def __init__(self, *args, **kwargs):
@@ -75,7 +101,7 @@ class Vec2D(Vector, Entity2D):
         self.x, self.y = v
 
 
-class Vec(Vector, Entity3D):
+class Vec(VecUtils, Entity3D):
     @stats_wrapper
     def __init__(self, *args, **kwargs):
         Vector.__init__(*args, **kwargs)
@@ -85,24 +111,6 @@ class Vec(Vector, Entity3D):
 
     def __repr__(self):
         return self.__str__()
-
-    def normalize(self):
-        super().normalize()
-        return self
-
-    def cross(self, other):
-        t = type(other)
-        if t is Vector:
-            return Vec(super().cross(other))
-        if t is Vec or t is Direction or t is Normal:
-            return Vec(super().cross(Vector(other)))
-        assert False, 'unhandled type of other: %s (%s)' % (str(other), str(t))
-
-    def as_vector(self):
-        return Vector(self)
-
-    def from_vector(self, v):
-        self.x, self.y, self.z = v
 
 
 class Point2D(Vector, Entity2D):
@@ -150,6 +158,28 @@ class Point2D(Vector, Entity2D):
     def from_vector(self, v):
         self.x, self.y = v
 
+    @staticmethod
+    def average(points):
+        x, y, c = 0, 0, 0
+        for p in points:
+            x += p.x
+            y += p.y
+            c += 1
+        if c == 0:
+            return Point2D((0, 0))
+        return Point2D((x / c, y / c))
+
+    @staticmethod
+    def weighted_average(weight_points):
+        x, y, c = 0, 0, 0
+        for w, p in weight_points:
+            x += p.x * w
+            y += p.y * w
+            c += w
+        if c == 0:
+            return Point2D((0, 0))
+        return Point2D((x / c, y / c))
+
 
 class Point(Vector, Entity3D):
     @stats_wrapper
@@ -164,7 +194,7 @@ class Point(Vector, Entity3D):
 
     def __add__(self, other):
         t = type(other)
-        if t is Direction:
+        if t is Direction or t is Normal:
             return Point((
                 self.x + other.x,
                 self.y + other.y,
@@ -260,7 +290,7 @@ class Direction2D(Vector, Entity2D):
         self.normalize()
 
 
-class Direction(Vector, Entity3D):
+class Direction(VecUtils, Entity3D):
     @stats_wrapper
     def __init__(self, t=None):
         if t is not None:
@@ -281,18 +311,6 @@ class Direction(Vector, Entity3D):
     def __rmul__(self, other):
         return self.__mul__(other)
 
-    def normalize(self):
-        super().normalize()
-        return self
-
-    def cross(self, other):
-        t = type(other)
-        if t is Vector:
-            return Vec(super().cross(other))
-        if t is Vec or t is Direction or t is Normal:
-            return Vec(super().cross(Vector(other)))
-        assert False, 'unhandled type of other: %s (%s)' % (str(other), str(t))
-
     def reverse(self):
         self.x *= -1
         self.y *= -1
@@ -302,15 +320,12 @@ class Direction(Vector, Entity3D):
     def angleBetween(self, other):
         return acos(mid(-1, 1, self.dot(other.normalized())))
 
-    def as_vector(self):
-        return Vector(self)
-
     def from_vector(self, v):
-        self.x, self.y, self.z = v
+        super().from_vector(v)
         self.normalize()
 
 
-class Normal(Vector, Entity3D):
+class Normal(VecUtils, Entity3D):
     @stats_wrapper
     def __init__(self, t=None):
         if t is not None:
@@ -331,23 +346,8 @@ class Normal(Vector, Entity3D):
     def __rmul__(self, other):
         return self.__mul__(other)
 
-    def normalize(self):
-        super().normalize()
-        return self
-
-    def cross(self, other):
-        t = type(other)
-        if t is Vector:
-            return Vec(super().cross(other))
-        if t is Vec or t is Direction or t is Normal:
-            return Vec(super().cross(Vector(other)))
-        assert False, 'unhandled type of other: %s (%s)' % (str(other), str(t))
-
-    def as_vector(self):
-        return Vector(self)
-
     def from_vector(self, v):
-        self.x, self.y, self.z = v
+        super().from_vector(v)
         self.normalize()
 
 
@@ -488,6 +488,9 @@ class Plane(Entity3D):
         print('%s %s %s' % (str(s0), str(s1), str(s2)))
         print('%s %s %s' % (str(p01), str(p12), str(p20)))
         assert False
+
+    def line_intersection(self, p0:Point, p1:Point):
+        return intersect_line_plane(p0, p1, self.o, self.n)
 
     @stats_wrapper
     def edge_intersect(self, points: List[Point]):
@@ -838,6 +841,9 @@ class XForm:
     def to_bglMatrix_Model(self):
         return self.to_bglMatrix(self.mx_p)
 
+    def to_bglMatrix_Inverse(self):
+        return self.to_bglMatrix(self.imx_p)
+
     def to_bglMatrix_Normal(self):
         return self.to_bglMatrix(self.mx_n)
 
@@ -865,16 +871,16 @@ class BBox:
         self.max = Point((Mx, My, Mz))
         self.mx, self.my, self.mz = mx, my, mz
         self.Mx, self.My, self.Mz = Mx, My, Mz
-        self.min_dim = min([
+        self.min_dim = min(
             self.Mx - self.mx,
             self.My - self.my,
             self.Mz - self.mz
-        ])
-        self.max_dim = max([
+        )
+        self.max_dim = max(
             self.Mx - self.mx,
             self.My - self.my,
             self.Mz - self.mz
-        ])
+        )
 
     @staticmethod
     def merge(boxes):
@@ -912,6 +918,36 @@ class Accel2D:
     bin_cols = 20
     bin_rows = 20
 
+    class SimpleVert:
+        def __init__(self, co):
+            self.co = co
+            self.is_valid = True
+
+    class SimpleEdge:
+        def __init__(self, verts):
+            self.verts = verts
+            self.p0 = verts[0].co
+            self.p1 = verts[1].co
+            self.v01 = self.p1 - self.p0
+            self.l = self.v01.length
+            self.d01 = self.v01 / max(self.l, 0.00000001)
+            self.is_valid = True
+        def closest(self, p):
+            v0p = p - self.p0
+            d = self.d01.dot(v0p)
+            return self.p0 + self.d01 * mid(d, 0, self.l)
+
+    @staticmethod
+    def simple_verts(verts, Point_to_Point2D):
+        verts = [Accel2D.SimpleVert(v) for v in verts]
+        return Accel2D(verts, [], [], Point_to_Point2D)
+
+    @staticmethod
+    def simple_edges(edges, Point_to_Point2D):
+        edges = [Accel2D.SimpleEdge((Accel2D.SimpleVert(v0), Accel2D.SimpleVert(v1))) for (v0, v1) in edges]
+        verts = [v for e in edges for v in e.verts]
+        return Accel2D(verts, edges, [], Point_to_Point2D)
+
     @profiler.profile
     def __init__(self, verts, edges, faces, Point_to_Point2D):
         self.verts = list(verts) if verts else []
@@ -921,6 +957,7 @@ class Accel2D:
         self.vert_type = type(self.verts[0]) if self.verts else None
         self.edge_type = type(self.edges[0]) if self.edges else None
         self.face_type = type(self.faces[0]) if self.faces else None
+        self.bins = {}
 
         self.v2Ds = [Point_to_Point2D(v.co) for v in verts]
         self.map_v_v2D = {v: v2d for (v, v2d) in zip(verts, self.v2Ds)}
@@ -938,17 +975,10 @@ class Accel2D:
             self.max = Point2D((1, 1))
         self.size = self.max - self.min
 
-        pr = profiler.start('initializing grid')
-        self.bins = [
-            [set() for j in range(self.bin_rows)]
-            for i in range(self.bin_cols)
-        ]
-        pr.done()
-
         pr = profiler.start('inserting verts')
         for (v, v2d) in zip(verts, self.v2Ds):
             i, j = self.compute_ij(v2d)
-            self.bins[i][j].add(v)
+            self._put(i, j, v)
         pr.done()
 
         pr = profiler.start('inserting edges')
@@ -959,7 +989,7 @@ class Accel2D:
             maxi, maxj = max(ij0[0], ij1[0]), max(ij0[1], ij1[1])
             for i in range(mini, maxi + 1):
                 for j in range(minj, maxj + 1):
-                    self.bins[i][j].add(e)
+                    self._put(i, j, e)
             # v0,v1 = e.verts
             # self._put_edge(e, self.map_v_v2D[v0], self.map_v_v2D[v1])
         pr.done()
@@ -974,63 +1004,81 @@ class Accel2D:
             maxi, maxj = max(i for (i, j) in ijs), max(j for (i, j) in ijs)
             for i in range(mini, maxi + 1):
                 for j in range(minj, maxj + 1):
-                    self.bins[i][j].add(f)
+                    self._put(i, j, f)
             # v0 = v2ds[0]
             # for v1,v2 in zip(v2ds[1:-1],v2ds[2:]):
             #    self._put_face(f, v0, v1, v2)
         pr.done()
 
+    @profiler.profile
+    def compute_ij(self, v2d):
+        n = v2d - self.min
+        i = int(self.bin_cols * n.x / self.size.x)
+        j = int(self.bin_rows * n.y / self.size.y)
+        i = max(0, min(self.bin_cols - 1, i))
+        j = max(0, min(self.bin_rows - 1, j))
+        return (i, j)
+
+    def _put(self, i, j, o):
+        t = (i, j)
+        if t not in self.bins: self.bins[t] = set()
+        self.bins[t].add(o)
+
+    def _get(self, i, j):
+        t = (i, j)
+        return self.bins.get(t, set())
+
+    @profiler.profile
+    def clean_invalid(self):
+        self.bins = {
+            t: {o for o in objs if o.is_valid}
+            for (t, objs) in self.bins.items()
+        }
+
     def _put_edge(self, e, v0, v1, depth=0):
         i0, j0 = self.compute_ij(v0)
         i1, j1 = self.compute_ij(v1)
         if i0 == i1 and j0 == j1:
-            self.bins[i0][j0].add(e)
-            return
-        if i0 == i1:
+            self._put(i0, j0, e)
+        elif i0 == i1:
             i = i0
             for j in range(min(j0, j1), max(j0, j1) + 1):
-                self.bins[i][j].add(e)
-            return
-        if j0 == j1:
+                self._put(i, j, e)
+        elif j0 == j1:
             j = j0
             for i in range(min(i0, i1), max(i0, i1) + 1):
-                self.bins[i][j].add(e)
-            return
-        if depth == 6:
-            self.bins[i0][j0].add(e)
-            self.bins[i1][j1].add(e)
-            return
-        vm = v0 + (v1 - v0) / 2
-        self._put_edge(e, v0, vm, depth=depth + 1)
-        self._put_edge(e, vm, v1, depth=depth + 1)
+                self._put(i, j, e)
+        elif depth == 6:
+            self._put(i0, j0, e)
+            self._put(i1, j1, e)
+        else:
+            vm = v0 + (v1 - v0) / 2
+            self._put_edge(e, v0, vm, depth=depth + 1)
+            self._put_edge(e, vm, v1, depth=depth + 1)
 
     def _put_face(self, f, v0, v1, v2, depth=0):
         i0, j0 = self.compute_ij(v0)
         i1, j1 = self.compute_ij(v1)
         i2, j2 = self.compute_ij(v2)
         if i0 == i1 and i0 == i2 and j0 == j1 and j0 == j2:
-            self.bins[i0][j0].add(f)
-            return
-        if i0 == i1 and j0 == j1:
+            self._put(i0, j0, f)
+        elif i0 == i1 and j0 == j1:
             self._put_edge(f, v0, v2, depth=depth)
-            return
-        if i0 == i2 and j0 == j2:
+        elif i0 == i2 and j0 == j2:
             self._put_edge(f, v0, v1, depth=depth)
-            return
-        if i1 == i2 and j1 == j2:
+        elif i1 == i2 and j1 == j2:
             self._put_edge(f, v1, v2, depth=depth)
-            return
-        if depth == 6:
-            self.bins[i0][j0].add(f)
-            self.bins[i1][j1].add(f)
-            self.bins[i2][j2].add(f)
-            return
-        v01 = v0 + (v1 - v0) / 2
-        v12 = v1 + (v2 - v1) / 2
-        v20 = v2 + (v0 - v2) / 2
-        self._put_face(f, v0, v01, v20, depth=depth + 1)
-        self._put_face(f, v1, v12, v01, depth=depth + 1)
-        self._put_face(f, v2, v20, v12, depth=depth + 1)
+        elif depth == 6:
+            self._put(i0, j0, f)
+            self._put(i1, j1, f)
+            self._put(i2, j2, f)
+        else:
+            v01 = v0 + (v1 - v0) / 2
+            v12 = v1 + (v2 - v1) / 2
+            v20 = v2 + (v0 - v2) / 2
+            self._put_face(f, v0, v01, v20, depth=depth + 1)
+            self._put_face(f, v1, v12, v01, depth=depth + 1)
+            self._put_face(f, v2, v20, v12, depth=depth + 1)
 
     @profiler.profile
     def get(self, v2d, within):
@@ -1040,7 +1088,7 @@ class Accel2D:
         l = set()
         for i in range(i0, i1 + 1):
             for j in range(j0, j1 + 1):
-                l |= self.bins[i][j]
+                l |= self._get(i, j)
         return {v for v in l if v.is_valid}
 
     @profiler.profile
@@ -1057,6 +1105,35 @@ class Accel2D:
     def get_faces(self, v2d, within):
         face_type = self.face_type
         return {g for g in self.get(v2d, within) if type(g) is face_type}
+
+    def nearest_vert(self, v2d):
+        Point_to_Point2D = self.Point_to_Point2D
+        vert_type = self.vert_type
+        x,y = v2d
+        i, j = self.compute_ij(v2d)
+        working = {(i,j)}
+        touched = set()
+        bv,bd = None,0
+        while working:
+            binij = working.pop()
+            if binij in touched: continue
+            touched.add(binij)
+            i,j = binij
+            if i < 0 or j < 0 or i >= self.bin_cols or j >= self.bin_rows: continue
+            mx,my = self.min + Vec2D((self.size.x * i / self.bin_cols, self.size.y * j / self.bin_rows))
+            Mx,My = self.min + Vec2D((self.size.x * (i+1) / self.bin_cols, self.size.y * (j+1) / self.bin_rows))
+            closest = Point2D((mid(x, mx, Mx), mid(y, my, My)))
+            d = (v2d - closest).length
+            if bv and d > bd:
+                # we have seen a vert that is closer than anything in this bin
+                continue
+            for v in self._get(i, j):
+                if type(v) is not vert_type: continue
+                d = (Point_to_Point2D(v.co) - v2d).length
+                if bv and d > bd: continue
+                bv,bd = v,d
+            working |= {(i-1,j-1), (i,j-1), (i+1,j-1), (i-1,j), (i+1,j), (i-1,j+1), (i,j+1), (i+1,j+1)}
+        return Point_to_Point2D(bv.co)
 
     @profiler.profile
     def nearest_face(self, v2d):
@@ -1077,31 +1154,13 @@ class Accel2D:
         Point_to_Point2D = self.Point_to_Point2D
         face_type = self.face_type
         i, j = self.compute_ij(v2d)
-        faces = [bmf for bmf in self.bins[i][j] if type(bmf) is face_type]
+        faces = [bmf for bmf in self._get(i, j) if type(bmf) is face_type]
         for bmf in faces:
             if not bmf.is_valid:
                 continue
             if intersect_face(bmf):
                 return bmf
         return None
-
-    @profiler.profile
-    def clean_invalid(self):
-        self.bins = [
-            [
-                {g for g in self.bins[i][j] if g.is_valid}
-                for j in range(self.bin_rows)
-            ] for i in range(self.bin_cols)
-        ]
-
-    @profiler.profile
-    def compute_ij(self, v2d):
-        n = v2d - self.min
-        i = int(self.bin_cols * n.x / self.size.x)
-        j = int(self.bin_rows * n.y / self.size.y)
-        i = max(0, min(self.bin_cols - 1, i))
-        j = max(0, min(self.bin_rows - 1, j))
-        return (i, j)
 
 
 def invert_matrix(mat):

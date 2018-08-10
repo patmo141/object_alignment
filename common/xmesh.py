@@ -26,10 +26,10 @@ class XMesh:
         self.bme.from_mesh(eme)
         if triangulate: self.triangulate()
         self.dirty()
-    
+
     def dirty(self):
         self._dirty = True
-    
+
     def clean(self):
         if not self._dirty: return
         self.bme.verts.ensure_lookup_table()
@@ -52,7 +52,7 @@ class XMesh:
     ###################################################################################
     # simple manipulations
     ###################################################################################
-    
+
     def triangulate(self):
         faces = [face for face in self.bme.faces if len(face.verts) != 3]
         #print('%d non-triangles' % len(faces))
@@ -63,7 +63,7 @@ class XMesh:
     ###################################################################################
     # ray casting functions
     ###################################################################################
-    
+
     def raycast(self, ray:Ray):
         ray_local = self.xform.w2l_ray(ray)
         p,n,i,d = self.bvh.ray_cast(ray_local.o, ray_local.d, ray_local.max)
@@ -100,7 +100,7 @@ class XMesh:
     ###################################################################################
     # nearest functions
     ###################################################################################
-    
+
     def nearest(self, point:Point, max_dist=float('inf')): #sys.float_info.max):
         point_local = self.xform.w2l_point(point)
         p,n,i,_ = self.bvh.find_nearest(point_local, max_dist)
