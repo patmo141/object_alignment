@@ -294,10 +294,10 @@ class Shader():
             if DEBUG_PRINT:
                 print('enabling shader <==================')
                 if self.checkErrors:
-                    self.drawing.glCheckError('using program (%d) pre' % self.shaderProg)
+                    self.drawing.glCheckError('something broke before enabling shader program (%s, %d)' % (self.name,self.shaderProg))
             bgl.glUseProgram(self.shaderProg)
             if self.checkErrors:
-                self.drawing.glCheckError('using program (%d) post' % self.shaderProg)
+                self.drawing.glCheckError('something broke after enabling shader program (%s,%d)' % (self.name,self.shaderProg))
 
             # special uniforms
             # - uMVPMatrix works around deprecated gl_ModelViewProjectionMatrix
@@ -315,14 +315,14 @@ class Shader():
         if DEBUG_PRINT:
             print('disabling shader <=================')
         if self.checkErrors:
-            self.drawing.glCheckError('disable program (%d) pre' % self.shaderProg)
+            self.drawing.glCheckError('something broke before disabling shader program (%s,%d)' % (self.name, self.shaderProg))
         try:
             if self.funcEnd: self.funcEnd(self)
         except Exception as e:
             print('Error with shader: ' + str(e))
         bgl.glUseProgram(0)
         if self.checkErrors:
-            self.drawing.glCheckError('disable program (%d) post' % self.shaderProg)
+            self.drawing.glCheckError('something broke after disabling shader program (%s,%d)' % (self.name, self.shaderProg))
 
 
 

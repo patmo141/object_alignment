@@ -35,6 +35,7 @@ import os
 import re
 import math
 import ctypes
+import traceback
 
 import bmesh
 import bgl
@@ -51,7 +52,7 @@ from mathutils.bvhtree import BVHTree
 from .debug import dprint
 from .shaders import Shader, buf_zero
 from .utils import shorten_floats
-from .maths import Point, Direction, Frame
+from .maths import Point, Direction, Frame, XForm
 from .maths import invert_matrix, matrix_normal
 from .profiler import profiler
 
@@ -80,6 +81,26 @@ def setupBMeshShader(shader):
     shader.assign('screen_size', Vector((area.width, area.height)))
 
 bmeshShader = Shader.load_from_file('bmeshShader', 'bmesh_render.glsl', funcStart=setupBMeshShader)
+
+
+def glCheckError(title):
+    err = bgl.glGetError()
+    if err == bgl.GL_NO_ERROR: return
+
+    derrs = {
+        bgl.GL_INVALID_ENUM: 'invalid enum',
+        bgl.GL_INVALID_VALUE: 'invalid value',
+        bgl.GL_INVALID_OPERATION: 'invalid operation',
+        bgl.GL_STACK_OVERFLOW: 'stack overflow',
+        bgl.GL_STACK_UNDERFLOW: 'stack underflow',
+        bgl.GL_OUT_OF_MEMORY: 'out of memory',
+        bgl.GL_INVALID_FRAMEBUFFER_OPERATION: 'invalid framebuffer operation',
+    }
+    if err in derrs:
+        print('ERROR (%s): %s' % (title, derrs[err]))
+    else:
+        print('ERROR (%s): code %d' % (title, err))
+    traceback.print_stack()
 
 
 def glColor(color):
@@ -688,9 +709,13 @@ def glDrawBMVerts(lbmv, opts=None, enableShader=True):
 
     glSetOptions('point', opts)
     bgl.glBegin(bgl.GL_POINTS)
+    glCheckError('something broke before rendering bmverts')
     render(1, 1, 1)
+    glCheckError('something broke after rendering bmverts')
     bgl.glEnd()
+    glCheckError('something broke after glEnd')
     bgl.glDisable(bgl.GL_LINE_STIPPLE)
+    glCheckError('something broke after glDisable(bgl.GL_LINE_STIPPLE')
 
     if mx or my or mz:
         glSetOptions('point mirror', opts)
@@ -713,82 +738,57 @@ def glDrawBMVerts(lbmv, opts=None, enableShader=True):
         bgl.glDisable(bgl.GL_LINE_STIPPLE)
 
     if enableShader:
+        glCheckError('before disabling shader')
         bmeshShader.disable()
 
 
 class BMeshRender():
     @profiler.profile
-    def __init__(
-        self, target_obj,
-        target_mx=None, source_bvh=None, source_mx=None
-    ):
+    def __init__(self, obj, xform=None):
         self.calllist = None
-        if type(target_obj) is bpy.types.Object:
-            print('Creating BMeshRender for ' + target_obj.name)
-            self.tar_bmesh = bmesh.new()
-            self.tar_bmesh.from_object(
-                target_obj, bpy.context.scene, deform=True)
-            self.tar_mx = target_mx or target_obj.matrix_world
-        elif type(target_obj) is bmesh.types.BMesh:
-            self.tar_bmesh = target_obj
-            self.tar_mx = target_mx or Matrix()
+        if type(obj) is bpy.types.Object:
+            print('Creating BMeshRender for ' + obj.name)
+            self.bme = bmesh.new()
+            self.bme.from_object(obj, bpy.context.scene, deform=True)
+            self.xform = xform or XForm(obj.matrix_world)
+        elif type(obj) is bmesh.types.BMesh:
+            self.bme = obj
+            self.xform = xform or XForm()
         else:
-            assert False, 'Unhandled type: ' + str(type(target_obj))
+            assert False, 'Unhandled type: ' + str(type(obj))
 
-        self.src_bvh = source_bvh
-        self.src_mx = source_mx or Matrix()
-        self.src_imx = invert_matrix(self.src_mx)
-        self.src_mxnorm = matrix_normal(self.src_mx)
-
-        self.bglMatrix = bgl.Buffer(bgl.GL_FLOAT, [16])
-        for i, v in enumerate(
-            v for r in self.tar_mx.transposed() for v in r
-        ):
-            self.bglMatrix[i] = v
+        self.buf_matrix_model = self.xform.to_bglMatrix_Model()
+        self.buf_matrix_normal = self.xform.to_bglMatrix_Normal()
 
         self.is_dirty = True
         self.calllist = bgl.glGenLists(1)
 
-    def replace_target_bmesh(self, target_bmesh):
-        self.tar_bmesh = target_bmesh
+    def replace_bmesh(self, bme):
+        self.bme = bme
         self.is_dirty = True
 
     def __del__(self):
-        if self.calllist:
-            bgl.glDeleteLists(self.calllist, 1)
-            self.calllist = None
+        if not self.calllist: return
+        bgl.glDeleteLists(self.calllist, 1)
+        self.calllist = None
 
     def dirty(self):
         self.is_dirty = True
 
     @profiler.profile
     def clean(self, opts=None):
-        if not self.is_dirty:
-            return
+        if not self.is_dirty: return
 
         # make not dirty first in case bad things happen while drawing
         self.is_dirty = False
 
-        if self.src_bvh:
-            # normal_update() will destroy normals of
-            # verts not connected to faces :(
-            self.tar_bmesh.normal_update()
-            for bmv in self.tar_bmesh.verts:
-                if len(bmv.link_faces) != 0:
-                    continue
-                _, n, _, _ = self.src_bvh.find_nearest(self.src_imx * bmv.co)
-                bmv.normal = (self.src_mxnorm * n).normalized()
-
         bgl.glNewList(self.calllist, bgl.GL_COMPILE)
         # do not change attribs if they're not set
         glSetDefaultOptions(opts=opts)
-        # bgl.glPushMatrix()
-        # bgl.glMultMatrixf(self.bglMatrix)
-        glDrawBMFaces(self.tar_bmesh.faces, opts=opts, enableShader=False)
-        glDrawBMEdges(self.tar_bmesh.edges, opts=opts, enableShader=False)
-        glDrawBMVerts(self.tar_bmesh.verts, opts=opts, enableShader=False)
+        glDrawBMFaces(self.bme.faces, opts=opts, enableShader=False)
+        glDrawBMEdges(self.bme.edges, opts=opts, enableShader=False)
+        glDrawBMVerts(self.bme.verts, opts=opts, enableShader=False)
         bgl.glDepthRange(0, 1)
-        # bgl.glPopMatrix()
         bgl.glEndList()
 
     @profiler.profile
@@ -796,6 +796,14 @@ class BMeshRender():
         try:
             self.clean(opts=opts)
             bmeshShader.enable()
+            #bmeshShader.assign('matrix_m',  self.buf_matrix_model)
+            #bmeshShader.assign('matrix_mn', self.buf_matrix_normal)
+            #bmeshShader.assign('matrix_t', buf_matrix_target)
+            #bmeshShader.assign('matrix_ti', buf_matrix_target_inv)
+            #bmeshShader.assign('matrix_v', buf_matrix_view)
+            #bmeshShader.assign('matrix_vn', buf_matrix_view_invtrans)
+            #bmeshShader.assign('matrix_p', buf_matrix_proj)
+            #bmeshShader.assign('dir_forward', view_forward)
             bgl.glCallList(self.calllist)
         except:
             pass

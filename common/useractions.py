@@ -198,6 +198,7 @@ class Actions:
         self.alt_right = False
 
         self.timer = False
+        self.time_delta = 0
 
     def update(self, context, event, timer, print_actions=False):
         self.just_pressed = None

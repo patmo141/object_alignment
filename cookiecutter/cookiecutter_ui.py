@@ -80,6 +80,7 @@ class CookieCutter_UI:
                 debugger.print_exception()
                 print(e)
 
+        self.drawing.set_region(bpy.context.space_data, bpy.context.region, bpy.context.space_data.region_3d, bpy.context.window)
         self._handle_preview = self._space.draw_handler_add(preview, tuple(), 'WINDOW', 'PRE_VIEW')
         self._handle_postview = self._space.draw_handler_add(postview, tuple(), 'WINDOW', 'POST_VIEW')
         self._handle_postpixel = self._space.draw_handler_add(postpixel, tuple(), 'WINDOW', 'POST_PIXEL')
@@ -106,6 +107,9 @@ class CookieCutter_UI:
             self.context.area.header_text_set()
         else:
             self.context.area.header_text_set(s)
+
+    def header_text_restore(self):
+        self.context.area.header_text_set()
 
     def cursor_modal_set(self, v):
         self.context.window.cursor_modal_set(v)

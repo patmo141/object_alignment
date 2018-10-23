@@ -35,10 +35,12 @@ import bgl
 # import blf
 from bpy.types import BoolProperty
 from mathutils import Matrix
+from bpy_extras.view3d_utils import location_3d_to_region_2d, region_2d_to_vector_3d
+from bpy_extras.view3d_utils import region_2d_to_location_3d, region_2d_to_origin_3d
 
 from .decorators import blender_version_wrapper
 from .fontmanager import FontManager as fm
-from .maths import Point2D, Vec2D, clamp, mid
+from .maths import Point2D, Vec2D, Point, Ray, Direction, clamp, mid
 from .profiler import profiler
 from .debug import dprint
 
@@ -86,7 +88,7 @@ class Drawing:
     def __init__(self):
         assert hasattr(self, '_creating'), "Do not instantiate directly.  Use Drawing.get_instance()"
 
-        self.rgn,self.r3d,self.window = None,None,None
+        self.space,self.rgn,self.r3d,self.window = None,None,None,None
         # self.font_id = 0
         self.fontsize = None
         self.fontsize_scaled = None
@@ -94,7 +96,8 @@ class Drawing:
         self.size_cache = {}
         self.set_font_size(12)
 
-    def set_region(self, rgn, r3d, window):
+    def set_region(self, space, rgn, r3d, window):
+        self.space = space
         self.rgn = rgn
         self.r3d = r3d
         self.window = window
@@ -268,6 +271,10 @@ class Drawing:
     def get_view_matrix(self):
         return self.r3d.perspective_matrix if self.r3d else None
 
+    def get_view_version(self):
+        m = self.r3d.view_matrix
+        return [v for r in m for v in r] + [self.space.lens]
+
     def get_view_matrix_buffer(self):
         if not self.r3d: return None
         return bgl.Buffer(bgl.GL_FLOAT, [4,4], self.get_view_matrix_list())
@@ -345,6 +352,13 @@ class Drawing:
             print('ERROR (%s): code %d' % (title, err))
         traceback.print_stack()
 
+    def Point2D_to_Ray(self, p2d):
+        o = Point(region_2d_to_origin_3d(self.rgn, self.r3d, p2d))
+        d = Direction(region_2d_to_vector_3d(self.rgn, self.r3d, p2d))
+        return Ray(o, d)
+
+    def Point_to_Point2D(self, p3d):
+        return Point2D(location_3d_to_region_2d(self.rgn, self.r3d, p3d))
 
 class ScissorStack:
     context = None
