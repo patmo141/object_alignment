@@ -19,9 +19,10 @@ Created by Jonathan Denning, Jonathan Williamson
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 '''
 
-import inspect
 import os
+import json
 import time
+import inspect
 
 import bpy
 
@@ -168,3 +169,119 @@ def blender_version_wrapper(op, ver):
 
         return callit
     return wrapit
+
+class PersistentOptions:
+    class WrappedDict:
+        def __init__(self, cls, filename, version, defaults, update_external):
+            self._dirty = False
+            self._last_save = time.time()
+            self._write_delay = 2.0
+            self._defaults = defaults
+            self._update_external = update_external
+            if version and 'options version' not in self._defaults:
+                self._defaults['persistent options version'] = version
+            self._dict = {}
+            if filename:
+                src = inspect.getsourcefile(cls)
+                path = os.path.split(os.path.abspath(src))[0]
+                self._fndb = os.path.join(path, filename)
+            else:
+                self._fndb = None
+            self.read()
+            if version and self['persistent options version'] != version:
+                self.reset()
+            self.update_external()
+        def update_external(self):
+            upd = self._update_external
+            if upd:
+                upd()
+        def dirty(self):
+            self._dirty = True
+            self.update_external()
+        def clean(self, force=False):
+            if not force:
+                if not self._dirty:
+                    return
+                if time.time() < self._last_save + self._write_delay:
+                    return
+            if self._fndb:
+                json.dump(self._dict, open(self._fndb, 'wt'), indent=2, sort_keys=True)
+            self._dirty = False
+            self._last_save = time.time()
+        def read(self):
+            self._dict = {}
+            if self._fndb and os.path.exists(self._fndb):
+                try:
+                    self._dict = json.load(open(self._fndb, 'rt'))
+                except Exception as e:
+                    print('Exception caught while trying to read options from "%s"' % self._fndb)
+                    print(str(e))
+                for k in set(self._dict.keys()) - set(self._defaults.keys()):
+                    print('Deleting extraneous key "%s" from options' % k)
+                    del self._dict[k]
+            self.update_external()
+            self._dirty = False
+        def keys(self):
+            return self._defaults.keys()
+        def reset(self):
+            keys = list(self._dict.keys())
+            for k in keys:
+                del self._dict[k]
+            self.dirty()
+            self.clean()
+        def __getitem__(self, key):
+            return self._dict[key] if key in self._dict else self._defaults[key]
+        def __setitem__(self, key, val):
+            assert key in self._defaults, 'Attempting to write "%s":"%s" to options, but key does not exist in defaults' % (str(key), str(val))
+            if self[key] == val: return
+            self._dict[key] = val
+            self.dirty()
+            self.clean()
+        def gettersetter(self, key, fn_get_wrap=None, fn_set_wrap=None):
+            if not fn_get_wrap: fn_get_wrap = lambda v: v
+            if not fn_set_wrap: fn_set_wrap = lambda v: v
+            oself = self
+            class GetSet:
+                def get(self):
+                    return fn_get_wrap(oself[key])
+                def set(self, v):
+                    v = fn_set_wrap(v)
+                    if oself[key] != v:
+                        oself[key] = v
+            return GetSet()
+
+    def __init__(self, filename=None, version=None):
+        self._filename = filename
+        self._version = version
+        self._db = None
+
+    def __call__(self, cls):
+        upd = getattr(cls, 'update', None)
+        if upd:
+            u = upd
+            def wrap():
+                def upd_wrap(*args, **kwargs):
+                    u(None)
+                return upd_wrap
+            upd = wrap()
+        self._db = PersistentOptions.WrappedDict(cls, self._filename, self._version, cls.defaults, upd)
+        db = self._db
+        class WrappedClass:
+            def __init__(self, *args, **kwargs):
+                self._db = db
+                self._def = cls.defaults
+            def __getitem__(self, key):
+                return self._db[key]
+            def __setitem__(self, key, val):
+                self._db[key] = val
+            def keys(self):
+                return self._db.keys()
+            def reset(self):
+                self._db.reset()
+            def clean(self):
+                self._db.clean()
+            def gettersetter(self, key, fn_get_wrap=None, fn_set_wrap=None):
+                return self._db.gettersetter(key, fn_get_wrap=fn_get_wrap, fn_set_wrap=fn_set_wrap)
+        return WrappedClass
+
+
