@@ -178,8 +178,7 @@ class PersistentOptions:
             self._write_delay = 2.0
             self._defaults = defaults
             self._update_external = update_external
-            if version and 'options version' not in self._defaults:
-                self._defaults['persistent options version'] = version
+            self._defaults['persistent options version'] = version
             self._dict = {}
             if filename:
                 src = inspect.getsourcefile(cls)
@@ -188,7 +187,7 @@ class PersistentOptions:
             else:
                 self._fndb = None
             self.read()
-            if version and self['persistent options version'] != version:
+            if self._dict.get('persistent options version', None) != version:
                 self.reset()
             self.update_external()
         def update_external(self):
@@ -227,6 +226,7 @@ class PersistentOptions:
             keys = list(self._dict.keys())
             for k in keys:
                 del self._dict[k]
+            self._dict['persistent options version'] = self['persistent options version']
             self.dirty()
             self.clean()
         def __getitem__(self, key):
