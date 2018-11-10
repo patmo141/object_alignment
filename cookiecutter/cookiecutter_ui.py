@@ -52,6 +52,8 @@ class CookieCutter_UI:
         self._space = self.context.space_data
         self.wm = UI_WindowManager()
         self.drawing = Drawing.get_instance()
+        self.drawing.set_region(bpy.context.space_data, bpy.context.region, bpy.context.space_data.region_3d, bpy.context.window)
+        self._manipulator = self.drawing.space.show_manipulator
         fns = {'pre3d':[], 'post3d':[], 'post2d':[]}
         for m,fn in self.find_fns('drawmode'): fns[m].append(fn)
         def draw(fns):
@@ -80,7 +82,6 @@ class CookieCutter_UI:
                 debugger.print_exception()
                 print(e)
 
-        self.drawing.set_region(bpy.context.space_data, bpy.context.region, bpy.context.space_data.region_3d, bpy.context.window)
         self._handle_preview = self._space.draw_handler_add(preview, tuple(), 'WINDOW', 'PRE_VIEW')
         self._handle_postview = self._space.draw_handler_add(postview, tuple(), 'WINDOW', 'POST_VIEW')
         self._handle_postpixel = self._space.draw_handler_add(postpixel, tuple(), 'WINDOW', 'POST_PIXEL')
@@ -116,3 +117,11 @@ class CookieCutter_UI:
 
     def cursor_modal_restore(self):
         self.context.window.cursor_modal_restore()
+
+    def manipulator_hide(self):
+        self.drawing.space.show_manipulator = False
+    def manipulator_show(self):
+        self.drawing.space.show_manipulator = True
+    def manipulator_restore(self):
+        self.drawing.space.show_manipulator = self._manipulator
+        
