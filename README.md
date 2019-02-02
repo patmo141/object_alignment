@@ -1,4 +1,4 @@
-# 'Addon Skeleton':
+# 'Points Picker':
 
 ...
 

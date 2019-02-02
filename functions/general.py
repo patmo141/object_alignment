@@ -17,5 +17,5 @@
 
 from .common import *
 
-def addon_skeleton_handle_exception():
-    handle_exception(log_name="Addon Skeleton log", report_button_loc="Addon Skeleton > Skeleton Interface > Report Error")
+def points_picker_handle_exception():
+    handle_exception(log_name="Points Picker log", report_button_loc="Points Picker > Points Picker > Report Error")
