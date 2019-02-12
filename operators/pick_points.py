@@ -143,9 +143,7 @@ class POINTSPICKER_OT_pick_points(CookieCutter):
         if self.actions.mousemove:
             x, y = self.event.mouse_region_x, self.event.mouse_region_y
             self.hover(bpy.context, x, y)
-
             self.cursor_modal_set("HAND" if self.hovered[0] == "POINT" else "CROSSHAIR")
-
 
         if self.actions.pressed("commit"):
             self.done();

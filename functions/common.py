@@ -31,17 +31,19 @@ from math import *
 
 # Blender imports
 import bpy
+import bmesh
 from mathutils import Vector, Euler, Matrix
 from bpy.types import Object, Scene
 props = bpy.props
 
 # https://github.com/CGCookie/retopoflow
 def bversion():
+    """ return Blender version """
     bversion = '%03d.%03d.%03d' % (bpy.app.version[0], bpy.app.version[1], bpy.app.version[2])
     return bversion
 
 
-def stopWatch(text, lastTime, precision=5):
+def stopwatch(text:str, lastTime, precision:int=5):
     """From seconds to Days;Hours:Minutes;Seconds"""
     value = time.time()-lastTime
 
@@ -62,12 +64,13 @@ def stopWatch(text, lastTime, precision=5):
     return time.time()
 
 
-def groupExists(name):
+def groupExists(name:str):
     """ check if group exists in blender's memory """
     return name in bpy.data.groups.keys()
 
 
-def getItemByID(collection, id):
+def getItemByID(collection:bpy.types.CollectionProperty, id:int):
+    """ get UIlist item from collection with given id """
     success = False
     for item in collection:
         if item.id == id:
@@ -76,7 +79,7 @@ def getItemByID(collection, id):
     return item if success else None
 
 
-def str_to_bool(s):
+def str_to_bool(s:str):
     if s == 'True':
         return True
     elif s == 'False':
@@ -85,24 +88,25 @@ def str_to_bool(s):
         raise ValueError  # evil ValueError that doesn't tell you what the wrong value was
 
 
-# def get_settings():
-#     if not hasattr(get_settings, 'settings'):
-#         addons = bpy.context.user_preferences.addons
-#         folderpath = os.path.dirname(os.path.abspath(__file__))
-#         while folderpath:
-#             folderpath,foldername = os.path.split(folderpath)
-#             if foldername in {'functions','addons'}: continue
-#             if foldername in addons: break
-#         else:
-#             assert False, 'Could not find non-"lib" folder'
-#         if not addons[foldername].preferences: return None
-#         get_settings.settings = addons[foldername].preferences
-#     return get_settings.settings
+def get_settings():
+    """ get preferences for current addon """
+    if not hasattr(get_settings, 'settings'):
+        addons = bpy.context.user_preferences.addons
+        folderpath = os.path.dirname(os.path.abspath(__file__))
+        while folderpath:
+            folderpath,foldername = os.path.split(folderpath)
+            if foldername in {'common','functions','addons'}: continue
+            if foldername in addons: break
+        else:
+            assert False, 'Could not find non-"lib" folder'
+        if not addons[foldername].preferences: return None
+        get_settings.settings = addons[foldername].preferences
+    return get_settings.settings
 
 
 # USE EXAMPLE: idfun=(lambda x: x.lower()) so that it ignores case
 # https://www.peterbe.com/plog/uniqifiers-benchmark
-def uniquify(seq, idfun=None):
+def uniquify(seq:iter, idfun=None):
     # order preserving
     if idfun is None:
         def idfun(x):
@@ -122,18 +126,18 @@ def uniquify(seq, idfun=None):
 
 
 # Not order preserving
-def uniquify1(seq):
+def uniquify1(seq:iter):
     keys = {}
     for e in seq:
         keys[e] = 1
     return list(keys.keys())
 
-def uniquify2(seq, innerType=list):
+def uniquify2(seq:list, innerType=list):
     return [innerType(x) for x in set(tuple(x) for x in seq)]
 
 
 # efficient removal from list if unordered
-def remove_item(ls, item):
+def remove_item(ls:list, item):
     try:
         i = ls.index(item)
     except ValueError:
@@ -143,7 +147,8 @@ def remove_item(ls, item):
     return True
 
 
-def tag_redraw_areas(areaTypes=["ALL"]):
+def tag_redraw_areas(areaTypes:iter=["ALL"]):
+    """ run tag_redraw for given area types """
     areaTypes = confirmList(areaTypes)
     for area in bpy.context.screen.areas:
         for areaType in areaTypes:
@@ -152,13 +157,13 @@ def tag_redraw_areas(areaTypes=["ALL"]):
 
 
 def disableRelationshipLines():
-    # disable relationship lines
+    """ disable relationship lines in VIEW_3D """
     for area in bpy.context.screen.areas:
         if area.type == 'VIEW_3D':
             area.spaces[0].show_relationship_lines = False
 
 
-def drawBMesh(bm, name="drawnBMesh"):
+def drawBMesh(bm:bmesh, name:str="drawnBMesh"):
     """ create mesh and object from bmesh """
     # note: neither are linked to the scene, yet, so they won't show in the 3d view
     m = bpy.data.meshes.new(name + "_mesh")
@@ -168,11 +173,12 @@ def drawBMesh(bm, name="drawnBMesh"):
     scn.objects.link(obj)     # link new object to scene
     scn.objects.active = obj  # make new object active
     obj.select = True         # make new object selected (does not deselect other objects)
-    bm.to_mesh(m)          # push bmesh data into m
+    bm.to_mesh(m)             # push bmesh data into m
     return obj
 
 
-def copyAnimationData(source, target):
+def copyAnimationData(source:Object, target:Object):
+    """ copy animation data from one object to another """
     if source.animation_data is None:
         return
 
@@ -189,6 +195,7 @@ def copyAnimationData(source, target):
 
 
 class Suppressor(object):
+    """ silence function and prevent exceptions """
     def __enter__(self):
         self.stdout = sys.stdout
         sys.stdout = self
@@ -202,8 +209,8 @@ class Suppressor(object):
         pass
 
 
-def applyModifiers(obj, only=None, exclude=["SMOKE"], curFrame=None):
-    hasArmature = False
+def applyModifiers(obj:Object, only:list=None, exclude:list=["SMOKE"]):
+    """ apply modifiers of types 'only' excluding 'exclude' types for object """
     select(obj, active=True, only=True)
     # apply modifiers
     for mod in obj.modifiers:
@@ -214,13 +221,11 @@ def applyModifiers(obj, only=None, exclude=["SMOKE"], curFrame=None):
                 bpy.ops.object.modifier_apply(apply_as='DATA', modifier=mod.name)
         except:
             mod.show_viewport = False
-        if mod.type == "ARMATURE" and not hasArmature and mod.show_viewport:
-            hasArmature = True
-    return hasArmature
 
 
 # code from https://stackoverflow.com/questions/1518522/python-most-common-element-in-a-list
-def most_common(L):
+def most_common(L:list):
+    """ find the most common item in a list """
     # get an iterable of (item, iterable) pairs
     SL = sorted((x, i) for i, x in enumerate(L))
     # print 'SL:', SL
@@ -241,53 +246,58 @@ def most_common(L):
     return max(groups, key=_auxfun)[0]
 
 
-def checkEqual(lst):
+def checkEqual(lst:list):
     """ verifies that all items in list are the same """
     return lst.count(lst[0]) == len(lst)
 
 
-def vec_mult(v1, v2):
+def vec_mult(v1:Vector, v2:Vector):
     """ componentwise multiplication for vectors """
     return Vector(e1 * e2 for e1, e2 in zip(v1, v2))
 
 
-def vec_div(v1, v2):
+def vec_div(v1:Vector, v2:Vector):
     """ componentwise division for vectors """
     return Vector(e1 / e2 for e1, e2 in zip(v1, v2))
 
 
-def vec_remainder(v1, v2):
+def vec_remainder(v1:Vector, v2:Vector):
     """ componentwise remainder for vectors """
     return Vector(e1 % e2 for e1, e2 in zip(v1, v2))
 
 
-def vec_abs(v1):
+def vec_abs(v1:Vector):
     """ componentwise absolute value for vectors """
     return Vector(abs(e1) for e1 in v1)
 
 
-def vec_conv(v1, innerType=int, outerType=Vector):
+def vec_conv(v1, innerType:type=int, outerType:type=Vector):
+    """ convert type of items in iterable """
     return outerType([innerType(x) for x in v1])
 
 
-def vec_round(v1, precision=0):
+def vec_round(v1:Vector, precision:int=0):
+    """ round items in vector """
     return Vector(round(e1, precision) for e1 in v1)
 
 
-def mean(lst):
+def mean(lst:list):
+    """ mean of a list """
     return sum(lst)/len(lst)
 
 
-def cap(string, max_len):
+def cap(string:str, max_len:int):
+    """ return string whose length does not exceed max_len """
     return string[:max_len] if len(string) > max_len else string
 
 
-def rreplace(s, old, new, occurrence=1):
+def rreplace(s:str, old:str, new:str, occurrence:int=1):
+    """ replace limited occurences of 'old' with 'new' in string starting from end """
     li = s.rsplit(old, occurrence)
     return new.join(li)
 
 
-def round_nearest(num, divisor):
+def round_nearest(num:float, divisor:int):
     """ round to nearest multiple of 'divisor' """
     rem = num % divisor
     if rem > divisor / 2:
@@ -296,25 +306,25 @@ def round_nearest(num, divisor):
         return round_down(num, divisor)
 
 
-def round_up(num, divisor):
+def round_up(num:float, divisor:int):
     """ round up to nearest multiple of 'divisor' """
     return num + divisor - (num % divisor)
 
 
-def round_down(num, divisor):
+def round_down(num:float, divisor:int):
     """ round down to nearest multiple of 'divisor' """
     return num - (num % divisor)
 
 
-def hash_str(string):
+def hash_str(string:str):
     return hashlib.md5(string.encode()).hexdigest()
 
 
-def confirmList(itemList):
+def confirmList(object):
     """ if single item passed, convert to list """
-    if type(itemList) != list:
-        itemList = [itemList]
-    return itemList
+    if type(object) not in (list, tuple):
+        object = [object]
+    return object
 
 
 def confirmIter(object):
@@ -326,7 +336,7 @@ def confirmIter(object):
     return object
 
 
-def insertKeyframes(objs, keyframeType, frame, if_needed=False):
+def insertKeyframes(objs, keyframeType:str, frame:int, if_needed:bool=False):
     """ insert key frames for given objects to given frames """
     objs = confirmIter(objs)
     options = set(["INSERTKEY_NEEDED"] if if_needed else [])
@@ -334,18 +344,13 @@ def insertKeyframes(objs, keyframeType, frame, if_needed=False):
         inserted = obj.keyframe_insert(data_path=keyframeType, frame=frame, options=options)
 
 
-def setActiveScn(scn):
+def setActiveScn(scn:Scene):
+    """ set active scene in all screens """
     for screen in bpy.data.screens:
         screen.scene = scn
 
 
-def getLayersList(layers):
-    layers = confirmIter(layers)
-    newLayersList = [i in layers for i in range(20)]
-    return newLayersList
-
-
-def setLayers(layers, scn=None):
+def setLayers(layers:iter, scn:Scene=None):
     """ set active layers of scn w/o 'dag ZERO' error """
     assert len(layers) == 20
     scn = scn or bpy.context.scene
@@ -355,8 +360,7 @@ def setLayers(layers, scn=None):
     scn.layers = layers
 
 
-def openLayer(layerNum, scn=None):
-    assert type(layerNum) == int
+def openLayer(layerNum:int, scn:Scene=None):
     scn = scn or bpy.context.scene
     layerList = [i == layerNum - 1 for i in range(20)]
     scn.layers = layerList
@@ -369,7 +373,7 @@ def deselectAll():
             obj.select = False
 
 
-def selectAll(hidden=False):
+def selectAll(hidden:bool=False):
     for obj in bpy.context.scene.objects:
         if not obj.select and (not obj.hide or hidden):
             obj.select = True
@@ -388,16 +392,18 @@ def unhide(objs):
             obj.hide = False
 
 
-def setActiveObj(obj, scene=None):
+def setActiveObj(obj:Object, scene:Scene=None):
+    if obj is None:
+        return
     assert type(obj) == Object
     scene = scene or bpy.context.scene
     scene.objects.active = obj
 
 
 def select(objList, active:bool=False, deselect:bool=False, only:bool=False, scene:Scene=None):
-    """ selects objs in list and deselects the rest """
+    """ selects objs in list (deselects the rest if 'only') """
     # confirm objList is a list of objects
-    objList = confirmList(objList)
+    objList = confirmIter(objList)
     # deselect all if selection is exclusive
     if only and not deselect:
         deselectAll()
@@ -408,18 +414,29 @@ def select(objList, active:bool=False, deselect:bool=False, only:bool=False, sce
     # set active object
     if active:
         setActiveObj(objList[0], scene=scene)
-    return True
+
+
+# def deselect(objList, scene:Scene=None):
+#     """ selects objs in list and deselects the rest """
+#     # confirm objList is a list of objects
+#     objList = confirmIter(objList)
+#     # select/deselect objects in list
+#     for obj in objList:
+#         if obj is not None:
+#             obj.select = False
 
 
 def delete(objs):
+    """ efficient deletion of objects """
     objs = confirmIter(objs)
     for obj in objs:
         if obj is None:
             continue
-        bpy.data.objects.remove(obj, True)
+        bpy.data.objects.remove(obj, do_unlink=True)
 
 
-def duplicate(obj, linked=False, link_to_scene=False):
+def duplicate(obj:Object, linked:bool=False, link_to_scene:bool=False):
+    """ efficient duplication of objects """
     copy = obj.copy()
     if not linked and copy.data:
         copy.data = copy.data.copy()
@@ -436,12 +453,14 @@ def selectVerts(verts):
 
 
 def smoothBMFaces(faces):
+    """ set given bmesh faces to smooth """
     faces = confirmIter(faces)
     for f in faces:
         f.smooth = True
 
 
 def smoothMeshFaces(faces):
+    """ set given Mesh faces to smooth """
     faces = confirmIter(faces)
     for f in faces:
         f.use_smooth = True
@@ -455,10 +474,8 @@ def checkEqual1(iterator):
         return True
     return all(first == rest for rest in iterator)
 
-
 def checkEqual2(iterator):
    return len(set(iterator)) <= 1
-
 
 def checkEqual3(lst):
    return lst[1:] == lst[:-1]
@@ -473,12 +490,13 @@ def checkEqual3(lst):
 
 
 def deepcopy(object):
+    """ efficient way to deepcopy json loadable object """
     jsonObj = json.dumps(object)
     newObj = json.loads(jsonObj)
     return newObj
 
 
-def changeContext(context, areaType):
+def changeContext(context, areaType:str):
     """ Changes current context and returns previous area type """
     lastAreaType = context.area.type
     context.area.type = areaType
@@ -495,7 +513,7 @@ def getLibraryPath():
 
 
 # https://github.com/CGCookie/retopoflow
-def showErrorMessage(message, wrap=80):
+def showErrorMessage(message:str, wrap:int=80):
     if not message or wrap == 0:
         return
     lines = message.splitlines()
@@ -517,13 +535,13 @@ def showErrorMessage(message, wrap=80):
 
     def draw(self,context):
         for line in lines:
-            self.layout.label(line)
+            self.layout.label(text=line)
 
     bpy.context.window_manager.popup_menu(draw, title="Error Message", icon="ERROR")
     return
 
 
-def handle_exception(log_name, report_button_loc):
+def handle_exception(log_name:str, report_button_loc:str):
     errormsg = print_exception(log_name)
     # if max number of exceptions occur within threshold of time, abort!
     errorStr = "Something went wrong. Please start an error report with us so we can fix it! ('%(report_button_loc)s')" % locals()
@@ -552,7 +570,7 @@ def getExceptionMessage():
 
 
 # http://stackoverflow.com/questions/14519177/python-exception-handling-line-number
-def print_exception(txtName, showError=False, errormsg=None):
+def print_exception(txtName:str, showError:bool=False, errormsg=None):
     errormsg = getExceptionMessage() if errormsg is None else errormsg
 
     print(errormsg)
@@ -573,7 +591,8 @@ def print_exception(txtName, showError=False, errormsg=None):
     return errormsg
 
 
-def updateProgressBars(printStatus, cursorStatus, cur_percent, old_percent, statusType, end=False):
+def updateProgressBars(printStatus:bool, cursorStatus:bool, cur_percent:float, old_percent:float, statusType:str, end:bool=False):
+    """ print updated progress bar and update progress cursor """
     if printStatus:
         # print status to terminal
         if cur_percent - old_percent > 0.001 and (cur_percent < 1 or end):
@@ -590,7 +609,8 @@ def updateProgressBars(printStatus, cursorStatus, cur_percent, old_percent, stat
     return old_percent
 
 
-def update_progress(job_title, progress):
+def update_progress(job_title:str, progress:float):
+    """ print updated progress bar """
     length = 20  # modify this to change the length
     block = int(round(length*progress))
     msg = "\r{0}: [{1}] {2}%".format(job_title, "#"*block + "-"*(length-block), round(progress*100, 1))
@@ -600,7 +620,8 @@ def update_progress(job_title, progress):
     sys.stdout.flush()
 
 
-def apply_transform(obj):
+def apply_transform(obj:Object):
+    """ efficiently apply object transformation """
     # select(obj, active=True, only=True)
     # bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
     loc, rot, scale = obj.matrix_world.decompose()
@@ -615,6 +636,7 @@ def apply_transform(obj):
 
 
 def parent_clear(objs, apply_transform=True):
+    """ efficiently clear parent """
     # select(objs, active=True, only=True)
     # bpy.ops.object.parent_clear(type='CLEAR_KEEP_TRANSFORM')
     objs = confirmIter(objs)
@@ -654,10 +676,12 @@ def writeErrorToFile(error_report_path:str, error_log:str, addon_version:str, gi
 
 
 def root_path():
+    """ get root system directory """
     return os.path.abspath(os.sep)
 
 
 def splitpath(path):
+    print(os.path.splitpath(path))
     folders = []
     while 1:
         path, folder = os.path.split(path)
@@ -666,6 +690,7 @@ def splitpath(path):
         else:
             if path != "": folders.append(path)
             break
+    print(folders[::-1])
     return folders[::-1]
 
 def apply_modifiers(obj, settings="PREVIEW"):
@@ -673,25 +698,180 @@ def apply_modifiers(obj, settings="PREVIEW"):
     obj.modifiers.clear()
     obj.data = m
 
-def get_settings():
-    addons = bpy.context.user_preferences.addons
-    stack = inspect.stack()
-    for entry in stack:
-        folderpath = os.path.dirname(entry[1])
-        foldername = os.path.basename(folderpath)
-        if foldername not in {'lib','addons'} and foldername in addons: break
+
+def safeUnlink(obj, protect=True):
+    scn = bpy.context.scene
+    try:
+        scn.objects.unlink(obj)
+    except RuntimeError:
+        pass
+    obj.protected = protect
+    obj.use_fake_user = True
+
+
+def safeLink(obj, protect=False):
+    scn = bpy.context.scene
+    scn.objects.link(obj)
+    obj.protected = protect
+    obj.use_fake_user = False
+
+
+def getBoundsBF(obj):
+    """ brute force method for obtaining object bounding box """
+    # initialize min and max
+    min = Vector((math.inf, math.inf, math.inf))
+    max = Vector((-math.inf, -math.inf, -math.inf))
+    # calculate min and max verts
+    for v in obj.data.vertices:
+        if v.co.x > max.x:
+            max.x = v.co.x
+        elif v.co.x < min.x:
+            min.x = v.co.x
+        if v.co.y > max.y:
+            max.y = v.co.y
+        elif v.co.y < min.y:
+            min.y = v.co.y
+        if v.co.z > max.z:
+            max.z = v.co.z
+        elif v.co.z < min.z:
+            min.z = v.co.z
+    # set up bounding box list of coord lists
+    bound_box = [list(min),
+                 [min.x, min.y, min.z],
+                 [min.x, min.y, max.z],
+                 [min.x, max.y, max.z],
+                 [min.x, max.y, min.z],
+                 [max.x, min.y, min.z],
+                 [max.y, min.y, max.z],
+                 list(max),
+                 [max.x, max.y, min.z]]
+    return bound_box
+
+
+def is_smoke(ob:Object):
+    """ check if object is smoke domain """
+    if ob is None:
+        return False
+    for mod in ob.modifiers:
+        if mod.type == "SMOKE" and mod.domain_settings and mod.show_viewport:
+            return True
+    return False
+
+
+def is_adaptive(ob):
+    """ check if smoke domain object uses adaptive domain """
+    if ob is None:
+        return False
+    for mod in ob.modifiers:
+        if mod.type == "SMOKE" and mod.domain_settings and mod.domain_settings.use_adaptive_domain:
+            return True
+    return False
+
+
+def bounds(obj, local:bool=False, use_adaptive_domain:bool=True):
+    """
+    returns object details with the following subattribute Vectors:
+
+    .max : maximum value of object
+    .min : minimum value of object
+    .mid : midpoint value of object
+    .dist: distance min to max
+
+    """
+
+    local_coords = getBoundsBF(obj) if is_smoke(obj) and is_adaptive(obj) and not use_adaptive_domain else obj.bound_box[:]
+    om = obj.matrix_world
+
+    if not local:
+        worldify = lambda p: om * Vector(p[:])
+        coords = [worldify(p).to_tuple() for p in local_coords]
     else:
-        assert False, 'could not find non-"lib" folder'
-    settings = addons[foldername].preferences
-    return settings
-def get_addon():
-    addons = bpy.context.user_preferences.addons
-    stack = inspect.stack()
-    for entry in stack:
-        folderpath = os.path.dirname(entry[1])
-        foldername = os.path.basename(folderpath)
-        if foldername not in {'lib','addons'} and foldername in addons: break
-    else:
-        assert False, 'could not find non-"lib" folder'
-    addon = addons[foldername]
-    return addon
+        coords = [p[:] for p in local_coords]
+
+    rotated = zip(*coords[::-1])
+    getMax = lambda i: max([co[i] for co in coords])
+    getMin = lambda i: min([co[i] for co in coords])
+
+    info = lambda: None
+    info.max = Vector((getMax(0), getMax(1), getMax(2)))
+    info.min = Vector((getMin(0), getMin(1), getMin(2)))
+    info.mid = (info.min + info.max) / 2
+    info.dist = info.max - info.min
+
+    return info
+
+
+def isUnique(lst:list):
+    """ ensure all items in list are unique """
+    return np.unique(lst).size == len(lst)
+
+
+def getSaturationMatrix(s:float):
+    """ returns saturation matrix from saturation value """
+    sr = (1 - s) * 0.3086  # or 0.2125
+    sg = (1 - s) * 0.6094  # or 0.7154
+    sb = (1 - s) * 0.0820  # or 0.0721
+    return Matrix(((sr + s, sr, sr), (sg, sg + s, sg), (sb, sb, sb + s)))
+
+
+def gammaCorrect(rgba:list, val:float):
+    """ camma correct color by value """
+    r, g, b, a = rgba
+    r = math.pow(r, val)
+    g = math.pow(g, val)
+    b = math.pow(b, val)
+    return [r, g, b, a]
+
+
+def setObjOrigin(obj, loc):
+    """ set object origin """
+    l, r, s = obj.matrix_world.decompose()
+    l_mat = Matrix.Translation(l)
+    r_mat = r.to_matrix().to_4x4()
+    s_mat_x = Matrix.Scale(s.x, 4, Vector((1, 0, 0)))
+    s_mat_y = Matrix.Scale(s.y, 4, Vector((0, 1, 0)))
+    s_mat_z = Matrix.Scale(s.z, 4, Vector((0, 0, 1)))
+    s_mat = s_mat_x * s_mat_y * s_mat_z
+    m = obj.data
+    m.transform(Matrix.Translation((obj.location-loc) * l_mat * r_mat * s_mat.inverted()))
+    obj.location = loc
+
+
+def transformToWorld(vec, mat, junk_bme=None):
+    """ transfrom vector to world space from 'mat' matrix local space """
+    # decompose matrix
+    loc = mat.to_translation()
+    rot = mat.to_euler()
+    scale = mat.to_scale()[0]
+    # apply rotation
+    if rot != Euler((0, 0, 0), "XYZ"):
+        junk_bme = bmesh.new() if junk_bme is None else junk_bme
+        v1 = junk_bme.verts.new(vec)
+        bmesh.ops.rotate(junk_bme, verts=[v1], cent=-loc, matrix=Matrix.Rotation(rot.x, 3, 'X'))
+        bmesh.ops.rotate(junk_bme, verts=[v1], cent=-loc, matrix=Matrix.Rotation(rot.y, 3, 'Y'))
+        bmesh.ops.rotate(junk_bme, verts=[v1], cent=-loc, matrix=Matrix.Rotation(rot.z, 3, 'Z'))
+        vec = v1.co
+    # apply scale
+    vec = vec * scale
+    # apply translation
+    vec += loc
+    return vec
+
+
+def transformToLocal(vec, mat, junk_bme=None):
+    """ transfrom vector to local space of 'mat' matrix """
+    # decompose matrix
+    loc = mat.to_translation()
+    rot = mat.to_euler()
+    scale = mat.to_scale()[0]
+    # apply scale
+    vec = vec / scale
+    # apply rotation
+    if rot != Euler((0, 0, 0), "XYZ"):
+        junk_bme = bmesh.new() if junk_bme is None else junk_bme
+        v1 = junk_bme.verts.new(vec)
+        bmesh.ops.rotate(junk_bme, verts=[v1], cent=loc, matrix=Matrix.Rotation(-rot.z, 3, 'Z'))
+        bmesh.ops.rotate(junk_bme, verts=[v1], cent=loc, matrix=Matrix.Rotation(-rot.y, 3, 'Y'))
+        bmesh.ops.rotate(junk_bme, verts=[v1], cent=loc, matrix=Matrix.Rotation(-rot.x, 3, 'X'))
+        vec = v1.co
+    return vec
