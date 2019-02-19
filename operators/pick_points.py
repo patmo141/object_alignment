@@ -38,6 +38,7 @@ from ..addon_common.common.maths import Point, Point2D, XForm
 from ..addon_common.common.decorators import PersistentOptions
 from ..functions import *
 from ..functions import bgl_utils
+from ..lib.point import D3Point
 
 
 @PersistentOptions()
@@ -88,9 +89,7 @@ class POINTSPICKER_OT_pick_points(CookieCutter):
         self.snap_type = "OBJECT"  #'SCENE' 'OBJECT'
         self.snap_ob = bpy.context.object
         self.started = False
-        self.b_pts = []  #vectors representing locations of points
-        self.normals = []
-        self.labels = [] #strings to be drawn above points
+        self.b_pts = list()  # list of 'Point' objects (see /lib/point.py)
         self.selected = -1
         self.hovered = [None, -1]
 
@@ -159,8 +158,8 @@ class POINTSPICKER_OT_pick_points(CookieCutter):
     @CookieCutter.FSM_State("grab", "enter")
     def start_grab(self):
         self.selected = self.hovered[1]
-        self.grab_undo_loc = self.b_pts[self.selected]
-        self.grab_undo_mp = self.normals[self.selected]
+        self.grab_undo_loc = self.b_pts[self.selected].location
+        self.grab_undo_mp = self.b_pts[self.selected].surface_normal
 
     @CookieCutter.FSM_State("grab")
     def modal_grab(self):
@@ -246,12 +245,12 @@ class POINTSPICKER_OT_pick_points(CookieCutter):
             self.grab_cancel()
 
         else:
-            self.b_pts[self.selected] = mx * loc
-            self.normals[self.selected] = no_mx * no
+            self.b_pts[self.selected].location = mx * loc
+            self.b_pts[self.selected].surface_normal = no_mx * no
 
     def grab_cancel(self):
         old_co =  self.grab_undo_loc
-        self.b_pts[self.selected] = old_co
+        self.b_pts[self.selected].location = old_co
 
     def click_add_point(self, context, x, y, label=None):
         '''
@@ -280,13 +279,13 @@ class POINTSPICKER_OT_pick_points(CookieCutter):
                 no_mx = iomx.to_3x3().transposed()
             hit = res
             if not hit:
-                #cast the ray into a plane a
-                #perpendicular to the view dir, at the last bez point of the curve
+                # cast the ray into a plane a
+                # perpendicular to the view dir, at the last bez point of the curve
 
                 view_direction = rv3d.view_rotation * Vector((0,0,-1))
 
                 if len(self.b_pts):
-                    plane_pt = self.b_pts[-1]
+                    plane_pt = self.b_pts[-1].location
                 else:
                     plane_pt = context.scene.cursor_location
                 loc = intersect_line_plane(ray_origin, ray_target,plane_pt, view_direction)
@@ -314,9 +313,8 @@ class POINTSPICKER_OT_pick_points(CookieCutter):
             return
 
         if self.hovered[0] == None:  #adding in a new point
-            self.b_pts.append(mx * loc)
-            self.normals.append(no_mx * no)
-            self.labels.append(label)
+            new_point = D3Point(label=label, location=mx * loc, surface_normal=no_mx * no, view_direction=rv3d.view_rotation)
+            self.b_pts.append(new_point)
             return True
         if self.hovered[0] == 'POINT':
             self.selected = self.hovered[1]
@@ -326,14 +324,10 @@ class POINTSPICKER_OT_pick_points(CookieCutter):
         if mode == 'mouse':
             if not self.hovered[0] == 'POINT': return
             self.b_pts.pop(self.hovered[1])
-            self.labels.pop(self.hovered[1])
-            self.normals.pop(self.hovered[1])
             self.hovered = [None, -1]
         else:
             if self.selected == -1: return
             self.b_pts.pop(self.selected)
-            self.labels.pop(self.selected)
-            self.normals.pop(self.selected)
 
     def hover(self, context, x, y):
         '''
@@ -380,14 +374,14 @@ class POINTSPICKER_OT_pick_points(CookieCutter):
             diff = v - Vector((x,y))
             return diff.length
 
-        def dist3d(v3):
-            if v3 == None:
+        def dist3d(pt):
+            if pt.location is None:
                 return 100000000
-            delt = v3 - mx * loc
+            delt = pt.location - mx * loc
             return delt.length
 
-        closest_3d_point = min(self.b_pts, key = dist3d)
-        screen_dist = dist(loc3d_reg2D(context.region, context.space_data.region_3d, closest_3d_point))
+        closest_3d_point = min(self.b_pts, key=dist3d)
+        screen_dist = dist(loc3d_reg2D(context.region, context.space_data.region_3d, closest_3d_point.location))
 
         self.hovered = ['POINT',self.b_pts.index(closest_3d_point)] if screen_dist < 20 else [None, -1]
 
@@ -396,20 +390,20 @@ class POINTSPICKER_OT_pick_points(CookieCutter):
         rv3d = context.space_data.region_3d
         dpi = bpy.context.user_preferences.system.dpi
         if len(self.b_pts) == 0: return
-        bgl_utils.draw_3d_points(context,self.b_pts, 3)
+        bgl_utils.draw_3d_points(context, [pt.location for pt in self.b_pts], 3)
 
         if self.selected != -1:
-            bgl_utils.draw_3d_points(context,[self.b_pts[self.selected]], 8, color = (0,1,1,1))
+            bgl_utils.draw_3d_points(context, [self.b_pts[self.selected].location], 8, color=(0,1,1,1))
 
         if self.hovered[0] == 'POINT':
-            bgl_utils.draw_3d_points(context,[self.b_pts[self.hovered[1]]], 8, color = (0,1,0,1))
+            bgl_utils.draw_3d_points(context, [self.b_pts[self.hovered[1]].location], 8, color=(0,1,0,1))
 
         blf.size(0, 20, dpi) #fond_id = 0
-        for txt, vect in zip(self.labels, self.b_pts):
-            if txt:
-                vector2d = view3d_utils.location_3d_to_region_2d(region, rv3d, vect)
+        for pt in self.b_pts:
+            if pt.label:
+                vector2d = view3d_utils.location_3d_to_region_2d(region, rv3d, pt.location)
                 blf.position(0, vector2d[0], vector2d[1], 0)
-                blf.draw(0, txt) #font_id = 0
+                blf.draw(0, pt.label) #font_id = 0
 
         return
 
