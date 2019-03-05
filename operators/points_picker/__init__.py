@@ -36,21 +36,11 @@ from ...addon_common.common.maths import Point, Point2D
 from ...addon_common.common.decorators import PersistentOptions
 
 
-# @PersistentOptions()
-# class OperatorOptions:
-#     defaults = {
-#         "by": "count",
-#         "count": 5,
-#         "length": 0.5,
-#         "position": 9,
-#     }
-
-
-class POINTSPICKER_OT_pick_points(PointsPicker_States, PointsPicker_UI_Init, PointsPicker_UI_Draw, CookieCutter):
-    """ Pick points """
-    bl_idname      = "pointspicker.pick_points"
+class VIEW3D_OT_pick_points(PointsPicker_States, PointsPicker_UI_Init, PointsPicker_UI_Draw, CookieCutter):
+    """ Place and move points on surface of target mesh """
+    bl_idname      = "view3d.pick_points"
     bl_label       = "Pick points"
-    bl_description = ""
+    bl_description = "Place and move points on surface of target mesh"
     bl_space_type  = "VIEW_3D"
     bl_region_type = "TOOLS"
 
@@ -88,16 +78,15 @@ class POINTSPICKER_OT_pick_points(PointsPicker_States, PointsPicker_UI_Init, Poi
 
     def end_commit(self):
         """ Commit changes to mesh! """
-        # scn = bpy.context.scene
-        # m = bpy.data.meshes.new("points_result")
-        # points_obj = bpy.data.objects.new("points_result", m)
-        # bme = bmesh.new()
-        # for co in self.b_pts:
-        #     bme.verts.new(co)
-        # bme.to_mesh(points_obj.data)
-        # scn.objects.link(points_obj)
-        # select(points_obj, active=True, only=True)
-        pass
+        scn = bpy.context.scene
+        m = bpy.data.meshes.new("points_result")
+        points_obj = bpy.data.objects.new("points_result", m)
+        bme = bmesh.new()
+        for co in self.b_pts:
+            bme.verts.new(co)
+        bme.to_mesh(points_obj.data)
+        scn.objects.link(points_obj)
+        select(points_obj, active=True, only=True)
 
     def end_cancel(self):
         """ Cancel changes """
