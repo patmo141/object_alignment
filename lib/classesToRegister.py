@@ -16,9 +16,9 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from .reportError import *
-from .preferences import *
-from ..ui import *
-from ..operators import *
+from .preferences import POINTSPICKER_PT_preferences
+from ..ui import VIEW3D_PT_tools_points_picker
+from ..operators.points_picker import POINTSPICKER_OT_pick_points
 
 classes = [
     POINTSPICKER_PT_preferences,

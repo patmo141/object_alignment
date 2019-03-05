@@ -16,29 +16,23 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # System imports
-import os
-import math
-import time
+# NONE!
 
 # Blender imports
 import bpy
-import blf
-import bgl
 import bmesh
-from bmesh.types import BMVert, BMEdge, BMFace
 from mathutils import Vector, Matrix
 from bpy_extras import view3d_utils
 from mathutils.geometry import intersect_line_line, intersect_point_line, intersect_line_plane
 
 # Addon imports
-from ..addon_common.cookiecutter.cookiecutter import CookieCutter
-from ..addon_common.common import ui
-from ..addon_common.common.bmesh_utils import BMeshSelectState, BMeshHideState
-from ..addon_common.common.maths import Point, Point2D, XForm
-from ..addon_common.common.decorators import PersistentOptions
-from ..functions import *
-from ..functions import bgl_utils
-from ..lib.point import D3Point
+from .points_picker_states import PointsPicker_States
+from .points_picker_ui import PointsPicker_UI
+from .points_picker_datastructure import D3Point
+from ...addon_common.cookiecutter.cookiecutter import CookieCutter
+from ...addon_common.common.blender import bversion
+from ...addon_common.common.maths import Point, Point2D
+from ...addon_common.common.decorators import PersistentOptions
 
 
 @PersistentOptions()
@@ -51,21 +45,13 @@ class OperatorOptions:
     }
 
 
-class POINTSPICKER_OT_pick_points(CookieCutter):
+class POINTSPICKER_OT_pick_points(PointsPicker_States, PointsPicker_UI, CookieCutter):
     """ Pick points """
     bl_idname      = "pointspicker.pick_points"
     bl_label       = "Pick points"
     bl_description = ""
     bl_space_type  = "VIEW_3D"
     bl_region_type = "TOOLS"
-
-    default_keymap = {
-        "grab":   {"LEFTMOUSE"},
-        "add":    {"SHIFT+LEFTMOUSE"},
-        "remove": {"ALT+LEFTMOUSE"},
-        "commit": {"RET"},
-        "cancel": {"ESC"},
-    }
 
     ################################################
     # CookieCutter Operator methods
@@ -124,60 +110,6 @@ class POINTSPICKER_OT_pick_points(CookieCutter):
         """ Check if we need to update any internal data structures """
         pass
 
-    #############################################
-    # State functions
-
-    @CookieCutter.FSM_State("main")
-    def modal_main(self):
-
-        if self.actions.pressed("add"):
-            x, y = self.event.mouse_region_x, self.event.mouse_region_y
-            self.click_add_point(bpy.context, x, y)
-            return "main"
-        if self.actions.pressed("remove"):
-            self.click_remove_point()
-            return "main"
-        if self.actions.pressed("grab"):
-            return "grab"
-        if self.actions.mousemove:
-            x, y = self.event.mouse_region_x, self.event.mouse_region_y
-            self.hover(bpy.context, x, y)
-            self.cursor_modal_set("HAND" if self.hovered[0] == "POINT" else "CROSSHAIR")
-
-        if self.actions.pressed("commit"):
-            self.done();
-            return
-        if self.actions.pressed("cancel"):
-            self.done(cancel=True)
-            return
-
-    @CookieCutter.FSM_State("grab", "can enter")
-    def can_start_grab(self):
-        return self.hovered[0] == "POINT"
-
-    @CookieCutter.FSM_State("grab", "enter")
-    def start_grab(self):
-        self.selected = self.hovered[1]
-        self.grab_undo_loc = self.b_pts[self.selected].location
-        self.grab_undo_mp = self.b_pts[self.selected].surface_normal
-
-    @CookieCutter.FSM_State("grab")
-    def modal_grab(self):
-        if self.actions.released("grab"):
-            self.grab_undo_loc = None
-            return "main"
-
-        if self.actions.mousemove:
-            x, y = self.event.mouse_region_x, self.event.mouse_region_y
-            self.grab_mouse_move(bpy.context, x, y)
-
-    ###################################################
-    # draw functions
-
-    @CookieCutter.Draw("post2d")
-    def draw_postpixel(self):
-        self.draw(bpy.context)
-
     ###################################################
     # class variables
 
@@ -185,9 +117,6 @@ class POINTSPICKER_OT_pick_points(CookieCutter):
 
     #############################################
     # class methods
-
-    def glVertex(self, p : Point):
-        bgl.glVertex3f(*self.xform.l2w_point(p))
 
     def closest_extrude_Point(self, p2D : Point2D) -> Point:
         r = self.drawing.Point2D_to_Ray(p2D)
@@ -384,27 +313,5 @@ class POINTSPICKER_OT_pick_points(CookieCutter):
         screen_dist = dist(loc3d_reg2D(context.region, context.space_data.region_3d, closest_3d_point.location))
 
         self.hovered = ['POINT',self.b_pts.index(closest_3d_point)] if screen_dist < 20 else [None, -1]
-
-    def draw(self, context):
-        region = context.region
-        rv3d = context.space_data.region_3d
-        dpi = bpy.context.user_preferences.system.dpi
-        if len(self.b_pts) == 0: return
-        bgl_utils.draw_3d_points(context, [pt.location for pt in self.b_pts], 3)
-
-        if self.selected != -1:
-            bgl_utils.draw_3d_points(context, [self.b_pts[self.selected].location], 8, color=(0,1,1,1))
-
-        if self.hovered[0] == 'POINT':
-            bgl_utils.draw_3d_points(context, [self.b_pts[self.hovered[1]].location], 8, color=(0,1,0,1))
-
-        blf.size(0, 20, dpi) #fond_id = 0
-        for pt in self.b_pts:
-            if pt.label:
-                vector2d = view3d_utils.location_3d_to_region_2d(region, rv3d, pt.location)
-                blf.position(0, vector2d[0], vector2d[1], 0)
-                blf.draw(0, pt.label) #font_id = 0
-
-        return
 
     #############################################
