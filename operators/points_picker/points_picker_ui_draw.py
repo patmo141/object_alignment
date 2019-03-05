@@ -27,8 +27,31 @@ from bpy_extras import view3d_utils
 
 # Addon imports
 from ...addon_common.cookiecutter.cookiecutter import CookieCutter
-from ...functions import bgl_utils
 
+
+#borrowed from edge filet from Zeffi (included with blend)
+def draw_3d_points(context, points, size, color = (1,0,0,1)):
+    region = context.region
+    rv3d = context.space_data.region_3d
+
+
+    bgl.glEnable(bgl.GL_POINT_SMOOTH)
+    bgl.glPointSize(size)
+    # bgl.glEnable(bgl.GL_BLEND)
+    bgl.glBlendFunc(bgl.GL_SRC_ALPHA, bgl.GL_ONE_MINUS_SRC_ALPHA)
+
+    bgl.glBegin(bgl.GL_POINTS)
+    # draw red
+    bgl.glColor4f(*color)
+    for coord in points:
+        vector3d = (coord.x, coord.y, coord.z)
+        vector2d = view3d_utils.location_3d_to_region_2d(region, rv3d, vector3d)
+        bgl.glVertex2f(*vector2d)
+    bgl.glEnd()
+
+    bgl.glDisable(bgl.GL_POINT_SMOOTH)
+    bgl.glDisable(bgl.GL_POINTS)
+    return
 
 class PointsPicker_UI_Draw():
 
@@ -42,13 +65,13 @@ class PointsPicker_UI_Draw():
         rv3d = context.space_data.region_3d
         dpi = bpy.context.user_preferences.system.dpi
         if len(self.b_pts) == 0: return
-        bgl_utils.draw_3d_points(context, [pt.location for pt in self.b_pts], 3)
+        draw_3d_points(context, [pt.location for pt in self.b_pts], 3)
 
         if self.selected != -1:
-            bgl_utils.draw_3d_points(context, [self.b_pts[self.selected].location], 8, color=(0,1,1,1))
+            draw_3d_points(context, [self.b_pts[self.selected].location], 8, color=(0,1,1,1))
 
         if self.hovered[0] == 'POINT':
-            bgl_utils.draw_3d_points(context, [self.b_pts[self.hovered[1]].location], 8, color=(0,1,0,1))
+            draw_3d_points(context, [self.b_pts[self.hovered[1]].location], 8, color=(0,1,0,1))
 
         # blf.size(0, 20, dpi) #fond_id = 0
         for i,pt in enumerate(self.b_pts):
