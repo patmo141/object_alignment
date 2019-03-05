@@ -23,6 +23,7 @@ import bpy
 
 # Addon imports
 from ...addon_common.cookiecutter.cookiecutter import CookieCutter
+from ...functions.common import tag_redraw_areas
 
 
 class PointsPicker_States():
@@ -47,16 +48,19 @@ class PointsPicker_States():
         if self.actions.pressed("add"):
             x, y = self.event.mouse_region_x, self.event.mouse_region_y
             self.click_add_point(bpy.context, x, y)
+            # update hovered point
+            x, y = self.event.mouse_region_x, self.event.mouse_region_y
+            self.hover(bpy.context, x, y)
             return "main"
         if self.actions.pressed("remove"):
             self.click_remove_point()
             return "main"
         if self.actions.pressed("grab"):
             return "grab"
-        if self.actions.mousemove:
+        if self.actions.mousemove or self.actions.navigating():
             x, y = self.event.mouse_region_x, self.event.mouse_region_y
             self.hover(bpy.context, x, y)
-            self.cursor_modal_set("HAND" if self.hovered[0] == "POINT" else "CROSSHAIR")
+        self.cursor_modal_set("HAND" if self.hovered[0] == "POINT" and not self.event.alt else "CROSSHAIR")
 
         if self.actions.pressed("commit"):
             self.done();

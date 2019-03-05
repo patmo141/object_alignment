@@ -27,7 +27,8 @@ from mathutils.geometry import intersect_line_line, intersect_point_line, inters
 
 # Addon imports
 from .points_picker_states import PointsPicker_States
-from .points_picker_ui import PointsPicker_UI
+from .points_picker_ui_init import PointsPicker_UI_Init
+from .points_picker_ui_draw import PointsPicker_UI_Draw
 from .points_picker_datastructure import D3Point
 from ...addon_common.cookiecutter.cookiecutter import CookieCutter
 from ...addon_common.common.blender import bversion
@@ -35,17 +36,17 @@ from ...addon_common.common.maths import Point, Point2D
 from ...addon_common.common.decorators import PersistentOptions
 
 
-@PersistentOptions()
-class OperatorOptions:
-    defaults = {
-        "by": "count",
-        "count": 5,
-        "length": 0.5,
-        "position": 9,
-    }
+# @PersistentOptions()
+# class OperatorOptions:
+#     defaults = {
+#         "by": "count",
+#         "count": 5,
+#         "length": 0.5,
+#         "position": 9,
+#     }
 
 
-class POINTSPICKER_OT_pick_points(PointsPicker_States, PointsPicker_UI, CookieCutter):
+class POINTSPICKER_OT_pick_points(PointsPicker_States, PointsPicker_UI_Init, PointsPicker_UI_Draw, CookieCutter):
     """ Pick points """
     bl_idname      = "pointspicker.pick_points"
     bl_label       = "Pick points"
@@ -71,6 +72,8 @@ class POINTSPICKER_OT_pick_points(PointsPicker_States, PointsPicker_UI, CookieCu
         self.header_text_set("PointsPicker")
         self.cursor_modal_set("CROSSHAIR")
         self.manipulator_hide()
+
+        self.ui_setup()
 
         self.snap_type = "OBJECT"  #'SCENE' 'OBJECT'
         self.snap_ob = bpy.context.object
@@ -241,13 +244,14 @@ class POINTSPICKER_OT_pick_points(PointsPicker_States, PointsPicker_UI, CookieCu
             self.selected = -1
             return
 
-        if self.hovered[0] == None:  #adding in a new point
-            new_point = D3Point(label=label, location=mx * loc, surface_normal=no_mx * no, view_direction=rv3d.view_rotation)
-            self.b_pts.append(new_point)
-            return True
-        if self.hovered[0] == 'POINT':
+        if self.hovered[0] == 'POINT':  # select existing point
             self.selected = self.hovered[1]
             return
+        elif self.hovered[0] == None:  # add new point
+            new_point = D3Point(label=label, location=mx * loc, surface_normal=no_mx * no, view_direction=rv3d.view_rotation)
+            self.b_pts.append(new_point)
+            self.hovered = ['POINT', new_point]
+            return True
 
     def click_remove_point(self, mode='mouse'):
         if mode == 'mouse':
@@ -312,6 +316,6 @@ class POINTSPICKER_OT_pick_points(PointsPicker_States, PointsPicker_UI, CookieCu
         closest_3d_point = min(self.b_pts, key=dist3d)
         screen_dist = dist(loc3d_reg2D(context.region, context.space_data.region_3d, closest_3d_point.location))
 
-        self.hovered = ['POINT',self.b_pts.index(closest_3d_point)] if screen_dist < 20 else [None, -1]
+        self.hovered = ['POINT', self.b_pts.index(closest_3d_point)] if screen_dist < 20 else [None, -1]
 
     #############################################

@@ -30,7 +30,7 @@ from ...addon_common.cookiecutter.cookiecutter import CookieCutter
 from ...functions import bgl_utils
 
 
-class PointsPicker_UI():
+class PointsPicker_UI_Draw():
 
     ###################################################
     # draw functions
@@ -50,7 +50,7 @@ class PointsPicker_UI():
         if self.hovered[0] == 'POINT':
             bgl_utils.draw_3d_points(context, [self.b_pts[self.hovered[1]].location], 8, color=(0,1,0,1))
 
-        blf.size(0, 20, dpi) #fond_id = 0
+        # blf.size(0, 20, dpi) #fond_id = 0
         for pt in self.b_pts:
             if pt.label:
                 vector2d = view3d_utils.location_3d_to_region_2d(region, rv3d, pt.location)
