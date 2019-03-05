@@ -42,8 +42,8 @@ class PointsPicker_UI_Init():
 
         # instructions
         self.instructions = {
-            "add": "Press 'SHIFT' and left-click to add a point",
-            "grab": "Hold left-click and drag on a point to move it along the surface of the mesh",
+            "add": "Press left-click to add or select a point",
+            "grab": "Hold left-click on a point and drag to move it along the surface of the mesh",
             "remove": "Press 'ALT' and left-click to remove a point",
         }
 
@@ -69,7 +69,7 @@ class PointsPicker_UI_Init():
         self.inst_paragraphs = [info.add(ui.UI_Markdown('', min_size=(200,10))) for i in range(3)]
         #for i in self.inst_paragraphs: i.visible = False
         #self.ui_instructions = info.add(ui.UI_Markdown('test', min_size=(200,200)))
-        opts = info.add(ui.UI_Frame('Tool Options'))
+        # opts = info.add(ui.UI_Frame('Tool Options'))
         # opts.add(ui.UI_Number("Size", get_blobsize, set_blobsize, fn_get_print_value=get_blobsize_print, fn_set_print_value=set_blobsize))
 
         self.set_ui_text()

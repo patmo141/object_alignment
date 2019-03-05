@@ -32,8 +32,8 @@ class PointsPicker_States():
     # State keymap
 
     default_keymap = {
+        "add":    {"LEFTMOUSE"},
         "grab":   {"LEFTMOUSE"},
-        "add":    {"SHIFT+LEFTMOUSE"},
         "remove": {"ALT+LEFTMOUSE"},
         "commit": {"RET"},
         "cancel": {"ESC"},
@@ -44,24 +44,31 @@ class PointsPicker_States():
 
     @CookieCutter.FSM_State("main")
     def modal_main(self):
-
-        if self.actions.pressed("add"):
-            x, y = self.event.mouse_region_x, self.event.mouse_region_y
-            self.click_add_point(bpy.context, x, y)
-            # update hovered point
-            x, y = self.event.mouse_region_x, self.event.mouse_region_y
-            self.hover(bpy.context, x, y)
-            return "main"
-        if self.actions.pressed("remove"):
-            self.click_remove_point()
-            return "main"
-        if self.actions.pressed("grab"):
-            return "grab"
+        # update hovered point
         if self.actions.mousemove or self.actions.navigating():
             x, y = self.event.mouse_region_x, self.event.mouse_region_y
             self.hover(bpy.context, x, y)
         self.cursor_modal_set("HAND" if self.hovered[0] == "POINT" and not self.event.alt else "CROSSHAIR")
 
+        # actions for no hovered point
+        if self.hovered[0] is None:
+            if self.actions.pressed("add"):
+                x, y = self.event.mouse_region_x, self.event.mouse_region_y
+                self.click_add_point(bpy.context, x, y, label=self.getLabel(len(self.b_pts)))
+                # update hovered point
+                x, y = self.event.mouse_region_x, self.event.mouse_region_y
+                self.hover(bpy.context, x, y)
+                self.cursor_modal_set("HAND")
+                return "grab"
+        # actions for hovered point
+        else:
+            if self.actions.pressed("remove"):
+                self.click_remove_point()
+                return "main"
+            if self.actions.pressed("grab"):
+                return "grab"
+
+        # other actions
         if self.actions.pressed("commit"):
             self.done();
             return

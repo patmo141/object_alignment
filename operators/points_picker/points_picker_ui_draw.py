@@ -51,8 +51,15 @@ class PointsPicker_UI_Draw():
             bgl_utils.draw_3d_points(context, [self.b_pts[self.hovered[1]].location], 8, color=(0,1,0,1))
 
         # blf.size(0, 20, dpi) #fond_id = 0
-        for pt in self.b_pts:
+        for i,pt in enumerate(self.b_pts):
             if pt.label:
+                if self.selected == i:
+                    color = (0,1,1,1)
+                elif self.hovered[1] == i:
+                    color = (0,1,0,1)
+                else:
+                    color = (1,0,0,1)
+                bgl.glColor4f(*color)
                 vector2d = view3d_utils.location_3d_to_region_2d(region, rv3d, pt.location)
-                blf.position(0, vector2d[0], vector2d[1], 0)
+                blf.position(0, vector2d[0], vector2d[1] + 5, 0)
                 blf.draw(0, pt.label) #font_id = 0

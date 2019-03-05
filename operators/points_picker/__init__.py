@@ -121,6 +121,9 @@ class POINTSPICKER_OT_pick_points(PointsPicker_States, PointsPicker_UI_Init, Poi
     #############################################
     # class methods
 
+    def getLabel(self, idx):
+        return "Anchor Point" if idx == 0 else "Pin %(idx)s" % locals()
+
     def closest_extrude_Point(self, p2D : Point2D) -> Point:
         r = self.drawing.Point2D_to_Ray(p2D)
         p,_ = intersect_line_line(
@@ -257,10 +260,13 @@ class POINTSPICKER_OT_pick_points(PointsPicker_States, PointsPicker_UI_Init, Poi
         if mode == 'mouse':
             if not self.hovered[0] == 'POINT': return
             self.b_pts.pop(self.hovered[1])
+            if self.selected == self.hovered[1]: self.selected = -1
+            elif self.selected > self.hovered[1]: self.selected -= 1
             self.hovered = [None, -1]
         else:
             if self.selected == -1: return
             self.b_pts.pop(self.selected)
+            self.selected = -1
 
     def hover(self, context, x, y):
         '''
