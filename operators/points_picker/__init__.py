@@ -34,6 +34,7 @@ from ...addon_common.cookiecutter.cookiecutter import CookieCutter
 from ...addon_common.common.blender import bversion
 from ...addon_common.common.maths import Point, Point2D
 from ...addon_common.common.decorators import PersistentOptions
+from ...functions.common import *
 
 
 class VIEW3D_OT_pick_points(PointsPicker_States, PointsPicker_UI_Init, PointsPicker_UI_Draw, CookieCutter):
@@ -79,14 +80,10 @@ class VIEW3D_OT_pick_points(PointsPicker_States, PointsPicker_UI_Init, PointsPic
     def end_commit(self):
         """ Commit changes to mesh! """
         scn = bpy.context.scene
-        m = bpy.data.meshes.new("points_result")
-        points_obj = bpy.data.objects.new("points_result", m)
-        bme = bmesh.new()
-        for co in self.b_pts:
-            bme.verts.new(co)
-        bme.to_mesh(points_obj.data)
-        scn.objects.link(points_obj)
-        select(points_obj, active=True, only=True)
+        for pt in self.b_pts:
+            point_obj = bpy.data.objects.new(pt.label, None)
+            point_obj.location = pt.location
+            scn.objects.link(point_obj)
 
     def end_cancel(self):
         """ Cancel changes """
@@ -111,7 +108,7 @@ class VIEW3D_OT_pick_points(PointsPicker_States, PointsPicker_UI_Init, PointsPic
     # class methods
 
     def getLabel(self, idx):
-        return "Anchor Point" if idx == 0 else "Pin %(idx)s" % locals()
+        return "P%(idx)s" % locals()
 
     def closest_extrude_Point(self, p2D : Point2D) -> Point:
         r = self.drawing.Point2D_to_Ray(p2D)
@@ -256,6 +253,8 @@ class VIEW3D_OT_pick_points(PointsPicker_States, PointsPicker_UI_Init, PointsPic
             if self.selected == -1: return
             self.b_pts.pop(self.selected)
             self.selected = -1
+        for i,pt in enumerate(self.b_pts):
+            pt.label = self.getLabel(i)
 
     def hover(self, context, x, y):
         '''
