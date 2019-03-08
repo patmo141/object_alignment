@@ -43,6 +43,7 @@ class CookieCutter_FSM:
         self._state_next = 'main'
         self._state = None
         self._fsm_states = {}
+        self._fsm_change_callbacks = []
         for (m,fn) in self.find_fns('fsmstate'):
             assert m not in self._fsm_states, 'Duplicate states registered!'
             self._fsm_states[m] = fn
@@ -59,6 +60,25 @@ class CookieCutter_FSM:
             debugger.print_exception()
             return
 
+    def fsm_change(self, state):
+        self._state_next = None
+        if self._state == state:
+            return True
+        if self._fsm_call(self._state, substate='can exit') == False:
+            print('Cannot exit %s' % str(self._state))
+            return False
+        if self._fsm_call(state, substate='can enter') == False:
+            print('Cannot enter %s' % str(state))
+            return False
+        print('%s -> %s' % (str(self._state), str(state)))
+        self._fsm_call(self._state, substate='exit')
+        self._state = state
+        self._fsm_call(self._state, substate='enter')
+        for fn in self._fsm_change_callbacks: fn()
+        return True
+
+    def fsm_change_callback(self, callback):
+        self._fsm_change_callbacks += [callback]
 
     def fsm_update(self):
         if self._state_next is not None and self._state_next != self._state:
@@ -75,5 +95,3 @@ class CookieCutter_FSM:
             self._state = self._state_next
             self._fsm_call(self._state, substate='enter')
         self._state_next = self._fsm_call(self._state, fail_if_not_exist=True)
-
-
