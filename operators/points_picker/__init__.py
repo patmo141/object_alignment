@@ -41,7 +41,7 @@ class VIEW3D_OT_points_picker(PointsPicker_States, PointsPicker_UI_Init, PointsP
     """ Place and move points on surface of target mesh """
     operator_id    = "view3d.points_picker"
     bl_idname      = "view3d.points_picker"
-    bl_label       = "Pick points"
+    bl_label       = "Points Picker"
     bl_description = "Place and move points on surface of target mesh"
     bl_space_type  = "VIEW_3D"
     bl_region_type = "TOOLS"
@@ -77,6 +77,7 @@ class VIEW3D_OT_points_picker(PointsPicker_States, PointsPicker_UI_Init, PointsP
         self.grab_undo_loc = None
         self.grab_undo_no = None
         self.mouse = (None, None)
+        self.start_post()
 
     def end_commit(self):
         """ Commit changes to mesh! """
@@ -315,5 +316,8 @@ class VIEW3D_OT_points_picker(PointsPicker_States, PointsPicker_UI_Init, PointsP
         screen_dist = dist(loc3d_reg2D(context.region, context.space_data.region_3d, closest_3d_point.location))
 
         self.hovered = ['POINT', self.b_pts.index(closest_3d_point)] if screen_dist < 20 else [None, -1]
+
+    def start_post(self):
+        pass
 
     #############################################
