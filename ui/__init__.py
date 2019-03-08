@@ -52,4 +52,4 @@ class VIEW3D_PT_tools_points_picker(Panel):
             row.operator("scene.close_report_error", text="", icon="PANEL_CLOSE").addon_name = "Points Picker"
 
         col = layout.column(align=True)
-        col.operator("view3d.pick_points")
+        col.operator("view3d.points_picker")

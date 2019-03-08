@@ -37,9 +37,10 @@ from ...addon_common.common.decorators import PersistentOptions
 from ...functions.common import *
 
 
-class VIEW3D_OT_pick_points(PointsPicker_States, PointsPicker_UI_Init, PointsPicker_UI_Draw, CookieCutter):
+class VIEW3D_OT_points_picker(PointsPicker_States, PointsPicker_UI_Init, PointsPicker_UI_Draw, CookieCutter):
     """ Place and move points on surface of target mesh """
-    bl_idname      = "view3d.pick_points"
+    operator_id    = "view3d.points_picker"
+    bl_idname      = "view3d.points_picker"
     bl_label       = "Pick points"
     bl_description = "Place and move points on surface of target mesh"
     bl_space_type  = "VIEW_3D"
@@ -106,6 +107,10 @@ class VIEW3D_OT_pick_points(PointsPicker_States, PointsPicker_UI_Init, PointsPic
 
     #############################################
     # class methods
+
+    def resetLabels(self):
+        for i,pt in enumerate(self.b_pts):
+            pt.label = self.getLabel(i)
 
     def getLabel(self, idx):
         return "P%(idx)s" % locals()
@@ -253,8 +258,7 @@ class VIEW3D_OT_pick_points(PointsPicker_States, PointsPicker_UI_Init, PointsPic
             if self.selected == -1: return
             self.b_pts.pop(self.selected)
             self.selected = -1
-        for i,pt in enumerate(self.b_pts):
-            pt.label = self.getLabel(i)
+        self.resetLabels()
 
     def hover(self, context, x, y):
         '''

@@ -18,10 +18,10 @@
 from .reportError import *
 from .preferences import POINTSPICKER_PT_preferences
 from ..ui import VIEW3D_PT_tools_points_picker
-from ..operators.points_picker import VIEW3D_OT_pick_points
+from ..operators.points_picker import VIEW3D_OT_points_picker
 
 classes = [
     POINTSPICKER_PT_preferences,
     VIEW3D_PT_tools_points_picker,
-    VIEW3D_OT_pick_points,
+    VIEW3D_OT_points_picker,
 ]
