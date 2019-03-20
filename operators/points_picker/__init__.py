@@ -244,7 +244,7 @@ class VIEW3D_OT_points_picker(PointsPicker_States, PointsPicker_UI_Init, PointsP
             self.selected = self.hovered[1]
             return
         elif self.hovered[0] == None:  # add new point
-            new_point = D3Point(label=label, location=mx * loc, surface_normal=no_mx * no, view_direction=rv3d.view_rotation)
+            new_point = D3Point(label=label, location=mx * loc, surface_normal=no_mx * no, view_direction=view_vector)
             self.b_pts.append(new_point)
             self.hovered = ['POINT', new_point]
             return True
