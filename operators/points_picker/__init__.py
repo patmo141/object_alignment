@@ -57,8 +57,9 @@ class VIEW3D_OT_points_picker(PointsPicker_States, PointsPicker_UI_Init, PointsP
 
     def start(self):
         """ ExtruCut tool is starting """
+        self.start_pre()
+        
         scn = bpy.context.scene
-
         bpy.ops.ed.undo_push()  # push current state to undo
 
         self.header_text_set("PointsPicker")
@@ -320,4 +321,6 @@ class VIEW3D_OT_points_picker(PointsPicker_States, PointsPicker_UI_Init, PointsP
     def start_post(self):
         pass
 
+    def start_pre(self):
+        pass
     #############################################
