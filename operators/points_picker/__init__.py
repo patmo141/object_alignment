@@ -66,6 +66,7 @@ class VIEW3D_OT_points_picker(PointsPicker_States, PointsPicker_UI_Init, PointsP
         self.manipulator_hide()
 
         self.ui_setup()
+        self.ui_setup_post()
 
         self.snap_type = "OBJECT"  #'SCENE' 'OBJECT'
         self.snap_ob = bpy.context.object
@@ -317,7 +318,22 @@ class VIEW3D_OT_points_picker(PointsPicker_States, PointsPicker_UI_Init, PointsP
 
         self.hovered = ['POINT', self.b_pts.index(closest_3d_point)] if screen_dist < 20 else [None, -1]
 
+    #############################################
+    # Subclassing functions
+
+    def ui_setup_post(self):
+        pass
+
     def start_post(self):
+        pass
+
+    def add_point_pre(self):  # returns True if point can be added, else False`
+        return True
+
+    def add_point_post(self, new_point):
+        pass
+
+    def move_point_post(self, moved_point):
         pass
 
     #############################################
