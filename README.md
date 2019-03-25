@@ -10,6 +10,10 @@
 
 * The following functions can be rewritten in a subclass:
 
+    * `self.can_start(context)`
+        * returns `True` if Points Picker ui and data structures can be initialized, else `False`
+        * by default, this function checks the following, where `ob` is `bpy.context.active_object`: `return ob is not None and ob.type == "MESH"`
+        * must be rewritten with the `@classmethod` decorator
     * `self.ui_setup_post()`
         * called after ui elements have been declared
         * add buttons, containers, properties, etc. to `self.tools_panel` or `self.info_panel`

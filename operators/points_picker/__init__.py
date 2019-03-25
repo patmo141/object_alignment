@@ -53,7 +53,7 @@ class VIEW3D_OT_points_picker(PointsPicker_States, PointsPicker_UI_Init, PointsP
     def can_start(cls, context):
         """ Start only if editing a mesh """
         ob = context.active_object
-        return ob and ob.type == "MESH"
+        return ob is not None and ob.type == "MESH"
 
     def start(self):
         """ ExtruCut tool is starting """
