@@ -20,6 +20,7 @@
 
 # Blender imports
 import bpy
+from bpy.types import Object
 from mathutils import Vector
 
 # Addon imports
@@ -29,11 +30,12 @@ from mathutils import Vector
 class D3Point(object):
     ''' Point object '''
 
-    def __init__(self, label:str, location:Vector, surface_normal:Vector, view_direction:Vector):
+    def __init__(self, location:Vector, surface_normal:Vector, view_direction:Vector, label:str="", source_object:Object=None):
         self.label = label
         self.location = location
         self.surface_normal = surface_normal
         self.view_direction = view_direction
+        self.source_object = source_object
 
     def __str__(self):
         return "<D3Point (%0.4f, %0.4f, %0.4f)>" % (self.location.x, self.location.y, self.location.z)
