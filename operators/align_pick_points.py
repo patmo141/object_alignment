@@ -55,10 +55,8 @@ class OBJECT_OT_align_pick_points(VIEW3D_OT_points_picker):
         # set up custom data structures
         self.align_points = list()
         self.base_points = list()
-        align_obj_name = bpy.context.object.name
-        base_obj_name  = [obj for obj in bpy.context.selected_objects if obj != bpy.context.object][0].name
-        self.align_obj = bpy.data.objects[align_obj_name]
-        self.base_obj = bpy.data.objects[base_obj_name]
+        self.align_obj = bpy.context.active_object
+        self.base_obj = [obj for obj in bpy.context.selected_objects if obj != bpy.context.object][0]
 
         # additional UI changes
         # self.additional_ui_setup()
@@ -127,11 +125,11 @@ class OBJECT_OT_align_pick_points(VIEW3D_OT_points_picker):
         bpy.ops.view3d.localview(override)
         bpy.ops.view3d.view_selected(override)
 
-        #Crash Blender?
+        # Crash Blender?
         bpy.ops.screen.area_join(min_x=self.area_align.x,min_y=self.area_align.y, max_x=self.area_base.x, max_y=self.area_base.y)
         bpy.ops.view3d.toolshelf()
 
-        #ret = bpy.ops.screen.area_join(min_x=area_base.x,min_y=area_base.y, max_x=area_align.x, max_y=area_align.y)
+        # ret = bpy.ops.screen.area_join(min_x=area_base.x,min_y=area_base.y, max_x=area_align.x, max_y=area_align.y)
 
     def align_objects(self, context):
         scn = bpy.context.scene
@@ -143,10 +141,10 @@ class OBJECT_OT_align_pick_points(VIEW3D_OT_points_picker):
             else:
                 self.align_points = self.align_points[0:len(self.base_points)]
 
-        A = np.zeros(shape = [3,len(self.base_points)])
-        B = np.zeros(shape = [3,len(self.base_points)])
+        A = np.zeros(shape=[3, len(self.base_points)])
+        B = np.zeros(shape=[3, len(self.base_points)])
 
-        for i in range(0,len(self.base_points)):
+        for i in range(0, len(self.base_points)):
             V1 = self.align_points[i]
             V2 = self.base_points[i]
 
@@ -154,16 +152,15 @@ class OBJECT_OT_align_pick_points(VIEW3D_OT_points_picker):
             B[0][i], B[1][i], B[2][i] = V2.location.x, V2.location.y, V2.location.z
 
 
-        #test new method
-        settings = get_addon_preferences()
-        align_meth = settings.align_meth
+        # test new method
+        align_meth = get_addon_preferences().align_meth
 
         if align_meth == '0': #rigid transform
             M = affine_matrix_from_points(A, B, shear=False, scale=False, usesvd=True)
         elif align_meth == '1': # rot, loc, scale
             M = affine_matrix_from_points(A, B, shear=False, scale=True, usesvd=True)
-        #else: #affine
-            #M = affine_matrix_from_points(A, B, shear=True, scale=True, usesvd=True)
+        # else: #affine
+        #     M = affine_matrix_from_points(A, B, shear=True, scale=True, usesvd=True)
 
 
         new_mat = Matrix.Identity(4)
@@ -171,8 +168,8 @@ class OBJECT_OT_align_pick_points(VIEW3D_OT_points_picker):
             for m in range(0,4):
                 new_mat[n][m] = M[n][m]
 
-        #because we calced transform in local space
-        #it's this easy to update the obj...
+        # because we calced transform in local space
+        # it's this easy to update the obj...
         self.align_obj.matrix_world = self.align_obj.matrix_world * new_mat
 
         self.align_obj.update_tag()
@@ -185,7 +182,7 @@ class OBJECT_OT_align_pick_points(VIEW3D_OT_points_picker):
             if area.type == 'VIEW_3D':
                 break
 
-        bpy.ops.view3d.toolshelf() #close the first toolshelf
+        bpy.ops.view3d.toolshelf() # close the first toolshelf
         override = bpy.context.copy()
         override['area'] = area
 
