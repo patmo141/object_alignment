@@ -57,7 +57,7 @@ class PointsPicker_States():
                 x, y = self.event.mouse_region_x, self.event.mouse_region_y
                 if not self.add_point_pre(Vector((x, y))): return "main"
                 self.click_add_point(bpy.context, x, y)
-                self.add_point_post(self.hovered[1])
+                self.add_point_post(self.b_pts[self.hovered[1]])
                 # update hovered point
                 x, y = self.event.mouse_region_x, self.event.mouse_region_y
                 self.hover(bpy.context, x, y)
@@ -101,4 +101,4 @@ class PointsPicker_States():
 
     @CookieCutter.FSM_State("grab", "exit")
     def exit_grab(self):
-        self.move_point_post(self.hovered[1])
+        self.move_point_post(self.b_pts[self.hovered[1]])

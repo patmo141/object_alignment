@@ -206,17 +206,17 @@ class VIEW3D_OT_points_picker(PointsPicker_States, PointsPicker_UI_Init, PointsP
                 hit, loc, no, ind, obj, omx = context.scene.ray_cast(ray_origin, view_vector)
                 iomx = omx.inverted()
                 no_mx = iomx.to_3x3().transposed()
-            if not hit:
-                # cast the ray into a plane perpendicular to the view dir, at the last bez point of the curve
-
-                view_direction = rv3d.view_rotation * Vector((0,0,-1))
-
-                if len(self.b_pts):
-                    plane_pt = self.b_pts[-1].location
-                else:
-                    plane_pt = context.scene.cursor_location
-                loc = intersect_line_plane(ray_origin, ray_target,plane_pt, view_direction)
-                hit = True
+            # if not hit:
+            #     # cast the ray into a plane perpendicular to the view dir, at the last bez point of the curve
+            #
+            #     view_direction = rv3d.view_rotation * Vector((0,0,-1))
+            #
+            #     if len(self.b_pts):
+            #         plane_pt = self.b_pts[-1].location
+            #     else:
+            #         plane_pt = context.scene.cursor_location
+            #     loc = intersect_line_plane(ray_origin, ray_target,plane_pt, view_direction)
+            #     hit = True
         # ray cast on self.snap_ob
         elif self.snap_type == 'OBJECT':
             mx = self.snap_ob.matrix_world
@@ -245,7 +245,7 @@ class VIEW3D_OT_points_picker(PointsPicker_States, PointsPicker_UI_Init, PointsP
             new_point = D3Point(location=mx * loc, surface_normal=no_mx * no, view_direction=view_vector, source_object=obj if self.snap_type == "SCENE" else self.snap_ob)
             self.b_pts.append(new_point)
             new_point.label = self.getLabel(len(self.b_pts) - 1)
-            self.hovered = ['POINT', new_point]
+            self.hovered = ['POINT', len(self.b_pts) - 1]
             return True
 
     def click_remove_point(self, mode='mouse'):
