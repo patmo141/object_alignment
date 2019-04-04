@@ -1,4 +1,7 @@
-object_alignment
-================
+# 'Object Alignment':
 
-picked points and ICP alignment addon for Blender
+Iterative closest point alignment addon for Blender
+
+# Instructions for Use:
+
+* ...
