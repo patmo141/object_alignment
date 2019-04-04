@@ -87,6 +87,7 @@ class VIEW3D_OT_points_picker(PointsPicker_States, PointsPicker_UI_Init, PointsP
             point_obj = bpy.data.objects.new(pt.label, None)
             point_obj.location = pt.location
             scn.objects.link(point_obj)
+        self.end_commit_post()
 
     def end_cancel(self):
         """ Cancel changes """
@@ -334,6 +335,9 @@ class VIEW3D_OT_points_picker(PointsPicker_States, PointsPicker_UI_Init, PointsP
         pass
 
     def move_point_post(self, moved_point):
+        pass
+
+    def end_commit_post(self):
         pass
 
     #############################################

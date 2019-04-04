@@ -16,15 +16,16 @@
         * must be rewritten with the `@classmethod` decorator
     * `self.ui_setup_post()`
         * called after ui elements have been declared
-        * add buttons, containers, properties, etc. to `self.tools_panel` or `self.info_panel`
-        * hide existing ui elements with the following lines:
+        * create your own ui panels and elements
+        * add/edit buttons, frames, properties, etc. in the existing structure:
         ```
-            self.info_panel.visible = False
-            self.tools_panel.visible = False
-            self.commit_button.visible = False
-            self.cancel_button.visible = False
+            self.info_panel
+                self.inst_paragraphs
+            self.tools_panel
+                self.commit_button
+                self.cancel_button
         ```
-        * create your own ui elements
+        * hide existing ui elements with the following code (replace `self.info_panel` with any ui element above): `self.info_panel.visible = False`
     * `self.start_post()`
         * called after ui and data structures have been initialized
     * `self.add_point_pre(loc)`
@@ -47,5 +48,8 @@
             * `new_point.surface_normal` = 3D surface normal Vector of the object at this point's location
             * `new_point.view_direction` = 3D view direction Vector of the viewport at the time this point was placed
     * `self.end_commit()`
-        * called when all points are committed
+        * called when Points Picker is committed
         * by default, this function creates new empty objects at each point location
+        * must end with the following line of code: `self.end_commit_post()`
+    * `self.end_commit_post()`
+        * called when Points Picker is committed
