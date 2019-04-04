@@ -22,12 +22,12 @@ from ..operators import *
 
 classes = [
     ObjectAlignmentPreferences,
-    OBJECT_OT_icp_align,
-    OBJECT_OT_icp_align_feedback,
     OBJECT_OT_align_add_include,
     OBJECT_OT_align_add_exclude,
     OBJECT_OT_align_include_clear,
     OBJECT_OT_align_exclude_clear,
     OBJECT_OT_align_pick_points,
+    OBJECT_OT_icp_align_feedback,
+    OBJECT_OT_icp_align,
     VIEW3D_PT_object_alignment,
 ]
