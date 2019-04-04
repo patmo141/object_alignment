@@ -49,13 +49,19 @@ class OBJECT_OT_align_pick_points(VIEW3D_OT_points_picker):
         return condition_1 and condition_2
 
     def start_post(self):
+        # override default settings
         self.snap_type = "SCENE"
+
+        # set up custom data structures
         self.align_points = list()
         self.base_points = list()
         align_obj_name = bpy.context.object.name
         base_obj_name  = [obj for obj in bpy.context.selected_objects if obj != bpy.context.object][0].name
         self.align_obj = bpy.data.objects[align_obj_name]
         self.base_obj = bpy.data.objects[base_obj_name]
+
+        # additional UI changes
+        # self.additional_ui_setup()
 
     def add_point_post(self, point):
         if point.source_object == self.align_obj:
@@ -69,9 +75,10 @@ class OBJECT_OT_align_pick_points(VIEW3D_OT_points_picker):
         """ Commit changes to mesh! """
         scn = bpy.context.scene
         for pt in self.b_pts:
-            # self.de_localize(context)
+            # self.de_localize(bpy.context)
             self.align_objects(bpy.context)
             select(self.align_obj, active=True)
+        self.end_commit_post()
 
     def getLabel(self, idx):
         point = self.b_pts[idx]
@@ -170,4 +177,39 @@ class OBJECT_OT_align_pick_points(VIEW3D_OT_points_picker):
 
         self.align_obj.update_tag()
         scn.update()
+
+    def additional_ui_setup(self):
+        screen = bpy.context.window.screen
+        areas = [area.as_pointer() for area in screen.areas]
+        for area in screen.areas:
+            if area.type == 'VIEW_3D':
+                break
+
+        bpy.ops.view3d.toolshelf() #close the first toolshelf
+        override = bpy.context.copy()
+        override['area'] = area
+
+        self.area_align = area
+
+        bpy.ops.screen.area_split(override, direction='VERTICAL', factor=0.5, mouse_x=-100, mouse_y=-100)
+
+        select(self.align_obj, only=True, active=True)
+
+        bpy.ops.view3d.localview(override)
+
+        self.align_obj.select = False
+        setActiveObj(None)
+        override = bpy.context.copy()
+        for area in screen.areas:
+            if area.as_pointer() not in areas:
+                override['area'] = area
+                self.area_base = area
+                select(self.base_obj, only=True, active=True)
+                override['selected_objects'] = [self.base_obj]
+                override['selected_editable_objects'] = [self.base_obj]
+                override['object'] =self.base_obj
+                override['active_object'] =self.base_obj
+                bpy.ops.view3d.localview(override)
+                break
+
     #############################################

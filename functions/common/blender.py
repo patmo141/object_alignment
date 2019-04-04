@@ -96,16 +96,10 @@ def duplicate(obj:Object, linked:bool=False, link_to_scene:bool=False):
 
 @blender_version_wrapper('<=','2.79')
 def setActiveObj(obj:Object, scene:Scene=None):
-    if obj is None:
-        return
-    assert type(obj) == Object
     scene = scene or bpy.context.scene
     scene.objects.active = obj
 @blender_version_wrapper('>=','2.80')
 def setActiveObj(obj:Object, view_layer:ViewLayer=None):
-    if obj is None:
-        return
-    assert type(obj) == Object
     view_layer = view_layer or bpy.context.view_layer
     view_layer.objects.active = obj
 
