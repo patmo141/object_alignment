@@ -53,3 +53,9 @@
         * must end with the following line of code: `self.end_commit_post()`
     * `self.end_commit_post()`
         * called when Points Picker is committed
+    * `self.can_commit()`
+        * called when the user attempts to commit Points Picker
+        * by default, this function returns True
+    * `self.can_cancel()`
+        * called when the user attempts to cancel Points Picker
+        * by default, this function returns True

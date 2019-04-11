@@ -72,10 +72,10 @@ class PointsPicker_States():
                 return "grab"
 
         # other actions
-        if self.actions.pressed("commit"):
+        if self.actions.pressed("commit") and self.can_commit():
             self.done();
             return
-        if self.actions.pressed("cancel"):
+        if self.actions.pressed("cancel") and self.can_cancel():
             self.done(cancel=True)
             return
 

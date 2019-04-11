@@ -339,4 +339,10 @@ class VIEW3D_OT_points_picker(PointsPicker_States, PointsPicker_UI_Init, PointsP
     def end_commit_post(self):
         pass
 
+    def can_commit(self):
+        return True
+
+    def can_cancel(self):
+        return True
+
     #############################################
