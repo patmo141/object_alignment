@@ -69,6 +69,13 @@ class OBJECT_OT_align_pick_points(VIEW3D_OT_points_picker):
         else:
             self.b_pts.pop(self.selected)
 
+    def can_commit(self):
+        if len(self.align_points) > 2 and len(self.base_points) > 2:
+            return True
+        else:
+            self.report({"WARNING"}, "Must pick at least 3 points per object before committing")
+            return False
+
     def end_commit(self):
         """ Commit changes to mesh! """
         scn = bpy.context.scene
