@@ -79,10 +79,10 @@ class OBJECT_OT_align_pick_points(VIEW3D_OT_points_picker):
     def end_commit(self):
         """ Commit changes to mesh! """
         scn = bpy.context.scene
-        for pt in self.b_pts:
-            # self.de_localize(bpy.context)
-            self.align_objects(bpy.context)
-            select(self.align_obj, active=True)
+
+        # self.de_localize(bpy.context)
+        self.align_objects(bpy.context)
+        select(self.align_obj, active=True)
         self.end_commit_post()
 
     def getLabel(self, idx):
@@ -141,6 +141,8 @@ class OBJECT_OT_align_pick_points(VIEW3D_OT_points_picker):
     def align_objects(self, context):
         scn = bpy.context.scene
 
+        imx = self.align_obj.matrix_world.inverted()
+        
         # match length of both lists to the shortest of the two
         if len(self.align_points) != len(self.base_points):
             if len(self.align_points) < len(self.base_points):
@@ -152,11 +154,11 @@ class OBJECT_OT_align_pick_points(VIEW3D_OT_points_picker):
         B = np.zeros(shape=[3, len(self.base_points)])
 
         for i in range(0, len(self.base_points)):
-            V1 = self.align_points[i]
-            V2 = self.base_points[i]
-
-            A[0][i], A[1][i], A[2][i] = V1.location.x, V1.location.y, V1.location.z
-            B[0][i], B[1][i], B[2][i] = V2.location.x, V2.location.y, V2.location.z
+            V1 = imx *self.align_points[i].location
+            V2 = imx* self.base_points[i].location
+        
+            A[0][i], A[1][i], A[2][i] = V1.x, V1.y, V1.z
+            B[0][i], B[1][i], B[2][i] = V2.x, V2.y, V2.z
 
 
         # test new method
