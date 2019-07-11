@@ -19,7 +19,7 @@ bl_info = {
     "name"        : "Pick Points",
     "author"      : "Christopher Gearhart <chris@bblanimation.com>",
     "version"     : (1, 0, 0),
-    "blender"     : (2, 79, 0),
+    "blender"     : (2, 80, 0),
     "description" : "",
     "location"    : "View3D > Tools > Pick Points",
     "warning"     : "",  # used for warning icon and text in addons panel

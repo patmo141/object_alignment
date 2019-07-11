@@ -1,4 +1,4 @@
-# Copyright (C) 2018 Christopher Gearhart
+# Copyright (C) 2019 Christopher Gearhart
 # chris@bblanimation.com
 # http://bblanimation.com/
 #
@@ -16,6 +16,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # System imports
+import time
 import os
 
 # Blender imports
@@ -26,9 +27,12 @@ from bpy.props import StringProperty
 # Addon imports
 from ..functions import *
 
+# define addon name (must match name in bl_info)
+addon_name = "Pick Points"
+
 class SCENE_OT_report_error(bpy.types.Operator):
     """Report a bug via an automatically generated issue ticket"""              # blender will use this as a tooltip for menu items and buttons.
-    bl_idname = "scene.report_error"                                            # unique identifier for buttons and menu items to reference.
+    bl_idname = "{}.report_error".format(makeBashSafe(addon_name.lower(), replace_with="_"))  # unique identifier for buttons and menu items to reference.
     bl_label = "Report Error"                                                   # display name in the interface.
     bl_options = {"REGISTER", "UNDO"}
 
@@ -37,9 +41,9 @@ class SCENE_OT_report_error(bpy.types.Operator):
 
     def execute(self, context):
         # set up file paths
-        libraryServersPath = os.path.join(getLibraryPath(), "error_log", self.txt_name)
+        libraryServersPath = os.path.join(get_addon_directory(), "error_log", self.txt_name)
         # write necessary debugging information to text file
-        writeErrorToFile(libraryServersPath, bpy.data.texts[self.addon_name + " log"].as_string(), str(self.version)[1:-1], self.github_path)
+        writeErrorToFile(libraryServersPath, bpy.data.texts[addon_name + " log"].as_string(), str(self.version)[1:-1], self.github_path)
         # open error report in UI with text editor
         lastType = changeContext(context, "TEXT_EDITOR")
         try:
@@ -58,36 +62,26 @@ class SCENE_OT_report_error(bpy.types.Operator):
     def __init__(self):
         # get version and github_path
         for mod in addon_utils.modules():
-            if mod.bl_info.get("name", "") == self.addon_name:
+            if mod.bl_info.get("name", "") == addon_name:
                 self.version = mod.bl_info.get("version", "")
                 self.github_path = mod.bl_info.get("tracker_url", "")
                 break
-        self.txt_name = self.addon_name + "_error_report.txt"
-
-    ###################################################
-    # class variables
-
-    addon_name = StringProperty()
+        self.txt_name = addon_name + "_error_report.txt"
 
     #############################################
 
 class SCENE_OT_close_report_error(bpy.types.Operator):
-    """Deletes error report from blender's memory (still exists in file system)"""    # blender will use this as a tooltip for menu items and buttons.
-    bl_idname = "scene.close_report_error"                                            # unique identifier for buttons and menu items to reference.
-    bl_label = "Close Report Error"                                                   # display name in the interface.
+    """Deletes error report from blender's memory (still exists in file system)""" # blender will use this as a tooltip for menu items and buttons.
+    bl_idname = "{}.close_report_error".format(makeBashSafe(addon_name.lower(), replace_with="_")) # unique identifier for buttons and menu items to reference.
+    bl_label = "Close Report Error"                                             # display name in the interface.
     bl_options = {"REGISTER", "UNDO"}
 
     ################################################
     # Blender Operator methods
 
     def execute(self, context):
-        txt = bpy.data.texts[self.addon_name + " log"]
-        bpy.data.texts.remove(txt, True)
+        txt = bpy.data.texts[addon_name + " log"]
+        bpy.data.texts.remove(txt, do_unlink=True)
         return{"FINISHED"}
-
-    ###################################################
-    # class variables
-
-    addon_name = StringProperty()
 
     #############################################
