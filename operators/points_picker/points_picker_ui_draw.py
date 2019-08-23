@@ -40,14 +40,25 @@ def draw_3d_points(context, points, size, color = (1,0,0,1)):
     # bgl.glEnable(bgl.GL_BLEND)
     bgl.glBlendFunc(bgl.GL_SRC_ALPHA, bgl.GL_ONE_MINUS_SRC_ALPHA)
 
+    bgl.glDepthRange(0, 0.9990)     # squeeze depth just a bit
+    bgl.glEnable(bgl.GL_BLEND)
+
+    bgl.glDepthFunc(bgl.GL_LEQUAL)
+    bgl.glDepthMask(bgl.GL_FALSE)   # do not overwrite depth
+
     bgl.glBegin(bgl.GL_POINTS)
     # draw red
     bgl.glColor4f(*color)
     for coord in points:
         vector3d = (coord.x, coord.y, coord.z)
-        vector2d = view3d_utils.location_3d_to_region_2d(region, rv3d, vector3d)
-        bgl.glVertex2f(*vector2d)
+        bgl.glVertex3f(*vector3d)
+        # vector2d = view3d_utils.location_3d_to_region_2d(region, rv3d, vector3d)
+        # bgl.glVertex2f(*vector2d)
     bgl.glEnd()
+
+    bgl.glDepthFunc(bgl.GL_LEQUAL)
+    bgl.glDepthRange(0.0, 1.0)
+    bgl.glDepthMask(bgl.GL_TRUE)
 
     bgl.glDisable(bgl.GL_POINT_SMOOTH)
     bgl.glDisable(bgl.GL_POINTS)
@@ -58,21 +69,34 @@ class PointsPicker_UI_Draw():
     ###################################################
     # draw functions
 
-    @CookieCutter.Draw("post2d")
-    def draw_postpixel(self):
-        context = bpy.context
-        region = context.region
-        rv3d = context.space_data.region_3d
-        dpi = bpy.context.user_preferences.system.dpi
+    @CookieCutter.Draw("post3d")
+    def draw_postview(self):
         if len(self.b_pts) == 0: return
-        draw_3d_points(context, [pt.location for pt in self.b_pts], 3)
+        draw_3d_points(bpy.context, [pt.location for pt in self.b_pts], 3)
 
         if self.selected != -1:
-            draw_3d_points(context, [self.b_pts[self.selected].location], 8, color=(0,1,1,1))
+            pt = self.b_pts[self.selected]
+            draw_3d_points(bpy.context, [pt.location], 8, color=(0,1,1,1))
+        if self.hovered[0] == 'POINT' and self.hovered[1] != self.selected:
+            pt = self.b_pts[self.hovered[1]]
+            draw_3d_points(bpy.context, [pt.location], 8, color=(0,1,0,1))
 
-        if self.hovered[0] == 'POINT':
-            draw_3d_points(context, [self.b_pts[self.hovered[1]].location], 8, color=(0,1,0,1))
+    @CookieCutter.Draw("post2d")
+    def draw_postpixel(self):
+        # if len(self.b_pts) == 0: return
+        # draw_3d_points(bpy.context, [pt.location for pt in self.b_pts], 3)
+        #
+        # if self.selected != -1:
+        #     pt = self.b_pts[self.selected]
+        #     draw_3d_points(bpy.context, [pt.location], 8, color=(0,1,1,1))
+        #
+        # if self.hovered[0] == 'POINT':
+        #     pt = self.b_pts[self.hovered[1]]
+        #     draw_3d_points(bpy.context, [pt.location], 8, color=(0,1,0,1))
 
+        region = bpy.context.region
+        rv3d = bpy.context.space_data.region_3d
+        dpi = bpy.context.user_preferences.system.dpi
         # blf.size(0, 20, dpi) #fond_id = 0
         for i,pt in enumerate(self.b_pts):
             if pt.label:

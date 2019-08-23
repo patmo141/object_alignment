@@ -53,12 +53,13 @@ class VIEW3D_OT_points_picker(PointsPicker_States, PointsPicker_UI_Init, PointsP
     def can_start(cls, context):
         """ Start only if editing a mesh """
         ob = context.active_object
-        return ob and ob.type == "MESH"
+        return ob is not None and ob.type == "MESH"
 
     def start(self):
         """ ExtruCut tool is starting """
+        self.start_pre()
+        
         scn = bpy.context.scene
-
         bpy.ops.ed.undo_push()  # push current state to undo
 
         self.header_text_set("PointsPicker")
@@ -66,6 +67,7 @@ class VIEW3D_OT_points_picker(PointsPicker_States, PointsPicker_UI_Init, PointsP
         self.manipulator_hide()
 
         self.ui_setup()
+        self.ui_setup_post()
 
         self.snap_type = "OBJECT"  #'SCENE' 'OBJECT'
         self.snap_ob = bpy.context.object
@@ -86,6 +88,7 @@ class VIEW3D_OT_points_picker(PointsPicker_States, PointsPicker_UI_Init, PointsP
             point_obj = bpy.data.objects.new(pt.label, None)
             point_obj.location = pt.location
             scn.objects.link(point_obj)
+        self.end_commit_post()
 
     def end_cancel(self):
         """ Cancel changes """
@@ -179,7 +182,7 @@ class VIEW3D_OT_points_picker(PointsPicker_States, PointsPicker_UI_Init, PointsP
         old_co =  self.grab_undo_loc
         self.b_pts[self.selected].location = old_co
 
-    def click_add_point(self, context, x, y, label=None):
+    def click_add_point(self, context, x, y):
         '''
         x,y = event.mouse_region_x, event.mouse_region_y
 
@@ -194,58 +197,57 @@ class VIEW3D_OT_points_picker(PointsPicker_States, PointsPicker_UI_Init, PointsP
         ray_target = ray_origin + (view_vector * 1000)
 
         hit = False
+        # ray cast on the any object
         if self.snap_type == 'SCENE':
-            mx = Matrix.Identity(4)  #loc is given in world loc...no need to multiply by obj matrix
+            mx = Matrix.Identity(4)  # loc is given in world loc...no need to multiply by obj matrix
             imx = Matrix.Identity(4)
             no_mx = Matrix.Identity(3)
             if bversion() < '002.077.000':
-                res, obj, omx, loc, no = context.scene.ray_cast(ray_origin, ray_target)  #changed in 2.77
+                hit, obj, omx, loc, no = context.scene.ray_cast(ray_origin, ray_target)  #changed in 2.77
             else:
-                res, loc, no, ind, obj, omx = context.scene.ray_cast(ray_origin, view_vector)
+                hit, loc, no, ind, obj, omx = context.scene.ray_cast(ray_origin, view_vector)
                 iomx = omx.inverted()
                 no_mx = iomx.to_3x3().transposed()
-            hit = res
-            if not hit:
-                # cast the ray into a plane a
-                # perpendicular to the view dir, at the last bez point of the curve
-
-                view_direction = rv3d.view_rotation * Vector((0,0,-1))
-
-                if len(self.b_pts):
-                    plane_pt = self.b_pts[-1].location
-                else:
-                    plane_pt = context.scene.cursor_location
-                loc = intersect_line_plane(ray_origin, ray_target,plane_pt, view_direction)
-                hit = True
-
+            # if not hit:
+            #     # cast the ray into a plane perpendicular to the view dir, at the last bez point of the curve
+            #
+            #     view_direction = rv3d.view_rotation * Vector((0,0,-1))
+            #
+            #     if len(self.b_pts):
+            #         plane_pt = self.b_pts[-1].location
+            #     else:
+            #         plane_pt = context.scene.cursor_location
+            #     loc = intersect_line_plane(ray_origin, ray_target,plane_pt, view_direction)
+            #     hit = True
+        # ray cast on self.snap_ob
         elif self.snap_type == 'OBJECT':
             mx = self.snap_ob.matrix_world
             imx = mx.inverted()
             no_mx = imx.to_3x3().transposed()
 
             if bversion() < '002.077.000':
-                loc, no, face_ind = self.snap_ob.ray_cast(imx * ray_origin, imx * ray_target)
-                if face_ind != -1:
-                    hit = True
+                loc, no, face_ind = self.snap_ob.ray_cast(imx * ray_origin, imx * ray_target)[0 if bversion() < '002.077.000' else 1:]
             else:
-                ok, loc, no, face_ind = self.snap_ob.ray_cast(imx * ray_origin, imx * ray_target - imx*ray_origin)
-                if ok:
-                    hit = True
+                hit, loc, no, face_ind = self.snap_ob.ray_cast(imx * ray_origin, imx * ray_target - imx*ray_origin)
 
             if face_ind != -1:
                 hit = True
 
+        # no object was hit
         if not hit:
             self.selected = -1
-            return
+            return False
 
-        if self.hovered[0] == 'POINT':  # select existing point
+        # select existing point
+        if self.hovered[0] == 'POINT':
             self.selected = self.hovered[1]
-            return
-        elif self.hovered[0] == None:  # add new point
-            new_point = D3Point(label=label, location=mx * loc, surface_normal=no_mx * no, view_direction=view_vector)
+            return False
+        # add new point
+        elif self.hovered[0] == None:
+            new_point = D3Point(location=mx * loc, surface_normal=no_mx * no, view_direction=view_vector, source_object=obj if self.snap_type == "SCENE" else self.snap_ob)
             self.b_pts.append(new_point)
-            self.hovered = ['POINT', new_point]
+            new_point.label = self.getLabel(len(self.b_pts) - 1)
+            self.hovered = ['POINT', len(self.b_pts) - 1]
             return True
 
     def click_remove_point(self, mode='mouse'):
@@ -317,7 +319,33 @@ class VIEW3D_OT_points_picker(PointsPicker_States, PointsPicker_UI_Init, PointsP
 
         self.hovered = ['POINT', self.b_pts.index(closest_3d_point)] if screen_dist < 20 else [None, -1]
 
+    #############################################
+    # Subclassing functions
+
+    def ui_setup_post(self):
+        pass
+
     def start_post(self):
         pass
 
+    def add_point_pre(self, loc):  # returns True if point can be added, else False`
+        return True
+
+    def add_point_post(self, new_point):
+        pass
+
+    def move_point_post(self, moved_point):
+        pass
+
+    def end_commit_post(self):
+        pass
+
+    def can_commit(self):
+        return True
+
+    def can_cancel(self):
+        return True
+
+    def start_pre(self):
+        pass
     #############################################

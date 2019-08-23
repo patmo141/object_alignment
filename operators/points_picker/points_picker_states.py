@@ -20,6 +20,7 @@
 
 # Blender imports
 import bpy
+from mathutils import Vector
 
 # Addon imports
 from ...addon_common.cookiecutter.cookiecutter import CookieCutter
@@ -54,7 +55,9 @@ class PointsPicker_States():
         if self.hovered[0] is None:
             if self.actions.pressed("add"):
                 x, y = self.event.mouse_region_x, self.event.mouse_region_y
-                self.click_add_point(bpy.context, x, y, label=self.getLabel(len(self.b_pts)))
+                if not self.add_point_pre(Vector((x, y))): return "main"
+                self.click_add_point(bpy.context, x, y)
+                self.add_point_post(self.b_pts[self.hovered[1]])
                 # update hovered point
                 x, y = self.event.mouse_region_x, self.event.mouse_region_y
                 self.hover(bpy.context, x, y)
@@ -69,10 +72,10 @@ class PointsPicker_States():
                 return "grab"
 
         # other actions
-        if self.actions.pressed("commit"):
+        if self.actions.pressed("commit") and self.can_commit():
             self.done();
             return
-        if self.actions.pressed("cancel"):
+        if self.actions.pressed("cancel") and self.can_cancel():
             self.done(cancel=True)
             return
 
@@ -95,3 +98,7 @@ class PointsPicker_States():
         if self.actions.mousemove:
             x, y = self.event.mouse_region_x, self.event.mouse_region_y
             self.grab_mouse_move(bpy.context, x, y)
+
+    @CookieCutter.FSM_State("grab", "exit")
+    def exit_grab(self):
+        self.move_point_post(self.b_pts[self.hovered[1]])
