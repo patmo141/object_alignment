@@ -35,7 +35,7 @@ class PointsPicker_States():
     default_keymap = {
         "add":    {"LEFTMOUSE"},
         "grab":   {"LEFTMOUSE"},
-        "remove": {"ALT+LEFTMOUSE"},
+        "remove": {"ALT+LEFTMOUSE", "RIGHTMOUSE"},
         "commit": {"RET"},
         "cancel": {"ESC"},
     }
