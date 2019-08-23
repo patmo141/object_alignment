@@ -22,7 +22,7 @@
 # NONE!
 
 # Addon imports
-from ...addon_common.common import ui
+from ...subtrees.addon_common.common import ui
 
 
 class PointsPicker_UI_Init():

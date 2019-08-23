@@ -30,10 +30,10 @@ from .points_picker_states import PointsPicker_States
 from .points_picker_ui_init import PointsPicker_UI_Init
 from .points_picker_ui_draw import PointsPicker_UI_Draw
 from .points_picker_datastructure import D3Point
-from ...addon_common.cookiecutter.cookiecutter import CookieCutter
-from ...addon_common.common.blender import bversion
-from ...addon_common.common.maths import Point, Point2D
-from ...addon_common.common.decorators import PersistentOptions
+from ...subtrees.addon_common.cookiecutter.cookiecutter import CookieCutter
+from ...subtrees.addon_common.common.blender import bversion
+from ...subtrees.addon_common.common.maths import Point, Point2D
+from ...subtrees.addon_common.common.decorators import PersistentOptions
 from ...functions.common import *
 
 
