@@ -26,7 +26,7 @@ from mathutils import Vector
 from bpy_extras import view3d_utils
 
 # Addon imports
-from ...addon_common.cookiecutter.cookiecutter import CookieCutter
+from ...subtrees.addon_common.cookiecutter.cookiecutter import CookieCutter
 
 
 #borrowed from edge filet from Zeffi (included with blend)

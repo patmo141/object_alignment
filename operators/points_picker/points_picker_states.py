@@ -23,7 +23,7 @@ import bpy
 from mathutils import Vector
 
 # Addon imports
-from ...addon_common.cookiecutter.cookiecutter import CookieCutter
+from ...subtrees.addon_common.cookiecutter.cookiecutter import CookieCutter
 from ...functions.common import tag_redraw_areas
 
 
@@ -35,7 +35,7 @@ class PointsPicker_States():
     default_keymap = {
         "add":    {"LEFTMOUSE"},
         "grab":   {"LEFTMOUSE"},
-        "remove": {"ALT+LEFTMOUSE"},
+        "remove": {"ALT+LEFTMOUSE", "RIGHTMOUSE"},
         "commit": {"RET"},
         "cancel": {"ESC"},
     }

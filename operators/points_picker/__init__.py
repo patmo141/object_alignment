@@ -30,10 +30,10 @@ from .points_picker_states import PointsPicker_States
 from .points_picker_ui_init import PointsPicker_UI_Init
 from .points_picker_ui_draw import PointsPicker_UI_Draw
 from .points_picker_datastructure import D3Point
-from ...addon_common.cookiecutter.cookiecutter import CookieCutter
-from ...addon_common.common.blender import bversion
-from ...addon_common.common.maths import Point, Point2D
-from ...addon_common.common.decorators import PersistentOptions
+from ...subtrees.addon_common.cookiecutter.cookiecutter import CookieCutter
+from ...subtrees.addon_common.common.blender import bversion
+from ...subtrees.addon_common.common.maths import Point, Point2D
+from ...subtrees.addon_common.common.decorators import PersistentOptions
 from ...functions.common import *
 
 
@@ -57,8 +57,9 @@ class VIEW3D_OT_points_picker(PointsPicker_States, PointsPicker_UI_Init, PointsP
 
     def start(self):
         """ ExtruCut tool is starting """
+        self.start_pre()
+        
         scn = bpy.context.scene
-
         bpy.ops.ed.undo_push()  # push current state to undo
 
         self.header_text_set("PointsPicker")
@@ -345,4 +346,6 @@ class VIEW3D_OT_points_picker(PointsPicker_States, PointsPicker_UI_Init, PointsP
     def can_cancel(self):
         return True
 
+    def start_pre(self):
+        pass
     #############################################
