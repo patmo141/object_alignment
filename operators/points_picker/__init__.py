@@ -25,7 +25,7 @@ from mathutils import Vector, Matrix
 from bpy_extras import view3d_utils
 from mathutils.geometry import intersect_line_line, intersect_point_line, intersect_line_plane
 
-# Addon imports
+# Module imports
 from .points_picker_states import PointsPicker_States
 from .points_picker_ui_init import PointsPicker_UI_Init
 from .points_picker_ui_draw import PointsPicker_UI_Draw
@@ -58,7 +58,7 @@ class VIEW3D_OT_points_picker(PointsPicker_States, PointsPicker_UI_Init, PointsP
     def start(self):
         """ ExtruCut tool is starting """
         self.start_pre()
-        
+
         scn = bpy.context.scene
         bpy.ops.ed.undo_push()  # push current state to undo
 

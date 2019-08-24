@@ -23,7 +23,7 @@ import bpy
 from bpy.types import Object
 from mathutils import Vector
 
-# Addon imports
+# Module imports
 # NONE!
 
 

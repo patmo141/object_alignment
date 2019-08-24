@@ -16,17 +16,20 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # System imports
-import json
+import marshal
 import itertools
 import operator
 import hashlib
-import numpy as np
+import re
 import sys
 import zlib
 import binascii
 from io import StringIO
 
 # Blender imports
+# NONE!
+
+# Module imports
 # NONE!
 
 
@@ -81,7 +84,7 @@ def most_common(L:list):
     """ find the most common item in a list """
     # get an iterable of (item, iterable) pairs
     SL = sorted((x, i) for i, x in enumerate(L))
-    # print 'SL:', SL
+    # print "SL:", SL
     groups = itertools.groupby(SL, key=operator.itemgetter(0))
 
     # auxiliary function to get "quality" for an item
@@ -92,21 +95,26 @@ def most_common(L:list):
         for _, where in iterable:
             count += 1
             min_index = min(min_index, where)
-        # print 'item %r, count %r, minind %r' % (item, count, min_index)
+        # print "item %r, count %r, minind %r" % (item, count, min_index)
         return count, -min_index
 
     # pick the highest-count/earliest item
     return max(groups, key=_auxfun)[0]
 
 
-def checkEqual(lst:list):
+def check_equal(lst:list):
     """ verifies that all items in list are the same """
     return lst.count(lst[0]) == len(lst)
 
 
-def isUnique(lst:list):
+def is_unique(lst:list):
     """ verifies that all items in list are unique """
-    return np.unique(lst).size == len(lst)
+    try:
+        import numpy as np
+        return np.unique(lst).size == len(lst)
+    # in case the user is running Ubuntu without numpy installed
+    except ImportError:
+        return len(lst) == len(set(lst))
 
 
 #################### STRINGS ####################
@@ -128,7 +136,7 @@ def hash_str(string:str):
 
 
 def compress_str(string:str):
-    compressed_str = zlib.compress(string.encode('utf-8'))
+    compressed_str = zlib.compress(string.encode("utf-8"))
     compressed_str = binascii.hexlify(compressed_str)
     return compressed_str.decode()
 
@@ -140,9 +148,9 @@ def decompress_str(string:str):
 
 
 def str_to_bool(s:str):
-    if s.lower() == 'true':
+    if s.lower() == "true":
         return True
-    elif s.lower() == 'false':
+    elif s.lower() == "false":
         return False
     else:
         raise ValueError("String '%(s)s' could not be evaluated as a bool" % locals())
@@ -152,49 +160,31 @@ def str_to_bool(s:str):
 
 
 def deepcopy(object):
-    """ efficient way to deepcopy json loadable object """
-    jsonObj = json.dumps(object)
-    newObj = json.loads(jsonObj)
-    return newObj
+    """ efficient way to deepcopy marshal loadable object """
+    marshal_obj = marshal.dumps(object)
+    new_obj = marshal.loads(marshal_obj)
+    return new_obj
 
 
-def checkEqual1(iterator):
-    iterator = iter(iterator)
-    try:
-        first = next(iterator)
-    except StopIteration:
-        return True
-    return all(first == rest for rest in iterator)
-
-def checkEqual2(iterator):
-   return len(set(iterator)) <= 1
-
-def checkEqual3(lst):
-   return lst[1:] == lst[:-1]
-# The difference between the 3 versions are that:
-#
-# In checkEqual2 the content must be hashable.
-# checkEqual1 and checkEqual2 can use any iterators, but checkEqual3 must take a sequence input, typically concrete containers like a list or tuple.
-# checkEqual1 stops as soon as a difference is found.
-# Since checkEqual1 contains more Python code, it is less efficient when many of the items are equal in the beginning.
-# Since checkEqual2 and checkEqual3 always perform O(N) copying operations, they will take longer if most of your input will return False.
-# checkEqual2 and checkEqual3 can't be easily changed to adopt to compare a is b instead of a == b.
-
-
-def confirmList(object):
+def confirm_list(object):
     """ if single item passed, convert to list """
     if type(object) not in (list, tuple):
         object = [object]
     return object
 
 
-def confirmIter(object):
+def confirm_iter(object):
     """ if single item passed, convert to list """
     try:
         iter(object)
     except TypeError:
         object = [object]
     return object
+
+
+def camel_to_snake_case(str):
+    s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', str)
+    return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
 
 
 class Suppressor(object):

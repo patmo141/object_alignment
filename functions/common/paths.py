@@ -23,12 +23,15 @@ import platform
 # Blender imports
 # NONE!
 
+# Module imports
+# NONE!
 
-def makeBashSafe(s:str, replace_with:str=None, unsafe_chars:str="!#$&'()*,;<=>?[]^`{|}~: "):
+
+def make_bash_safe(s:str, replace_with:str=None, unsafe_chars:str="!#$&'()*,;<=>?[]^`{|}~: "):
     """ make filenames and paths bash safe """
     # protects against file names that would cause problems with bash calls
     if s.startswith(".") or s.startswith("-"):
-        s= "_" + s[1:]
+        s = "_" + s[1:]
     # protects problematic bash characters with backslash (or replaces them if 'replace_with' is a string)
     for char in unsafe_chars:
         s = s.replace(char, ("\\" + char) if type(replace_with) != str else replace_with)
@@ -42,7 +45,7 @@ def root_path():
 
 def temp_path():
     """ get system temp directory """
-    return  '/tmp' if platform.system() == 'Darwin' else tempfile.gettempdir()
+    return "/tmp" if platform.system() == "Darwin" else tempfile.gettempdir()
 
 
 def splitpath(path:str):
@@ -53,6 +56,7 @@ def splitpath(path:str):
         if folder != "":
             folders.append(folder)
         else:
-            if path != "": folders.append(path)
+            if path != "":
+                folders.append(path)
             break
     return folders[::-1]

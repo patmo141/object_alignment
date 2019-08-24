@@ -15,17 +15,13 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-# System imports
-import math
+from .report_error import *
+from .preferences import POINTSPICKER_PT_preferences
+from ..ui import VIEW3D_PT_tools_points_picker
+from ..operators.points_picker import VIEW3D_OT_points_picker
 
-# Blender imports
-import bpy
-from bpy.types import Operator, Panel
-from bpy.app.handlers import persistent
-
-# Addon imports
-from ..functions import *
-
-# @persistent
-# def handle_something(scn):
-#     pass
+classes = [
+    POINTSPICKER_PT_preferences,
+    VIEW3D_PT_tools_points_picker,
+    VIEW3D_OT_points_picker,
+]

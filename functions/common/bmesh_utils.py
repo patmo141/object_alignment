@@ -1,4 +1,4 @@
-# Copyright (C) 2018 Christopher Gearhart
+# Copyright (C) 2019 Christopher Gearhart
 # chris@bblanimation.com
 # http://bblanimation.com/
 #
@@ -15,13 +15,20 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from .reportError import *
-from .preferences import POINTSPICKER_PT_preferences
-from ..ui import VIEW3D_PT_tools_points_picker
-from ..operators.points_picker import VIEW3D_OT_points_picker
+# System imports
+import math
 
-classes = [
-    POINTSPICKER_PT_preferences,
-    VIEW3D_PT_tools_points_picker,
-    VIEW3D_OT_points_picker,
-]
+# Blender imports
+import bpy
+import bmesh
+from mathutils import Vector
+
+# Module imports
+from .python_utils import *
+
+
+def smooth_bm_faces(faces:iter):
+    """ set given bmesh faces to smooth """
+    faces = confirm_iter(faces)
+    for f in faces:
+        f.smooth = True

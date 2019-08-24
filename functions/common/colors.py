@@ -1,4 +1,4 @@
-# Copyright (C) 2019 Christopher Gearhart
+# Copyright (C) 2020 Christopher Gearhart
 # chris@bblanimation.com
 # http://bblanimation.com/
 #
@@ -20,10 +20,13 @@ import math
 
 # Blender imports
 import bpy
-from mathutils import Matrix
+from mathutils import Matrix, Vector
+
+# Module imports
+# NONE!
 
 
-def getSaturationMatrix(s:float):
+def get_saturation_matrix(s:float):
     """ returns saturation matrix from saturation value """
     sr = (1 - s) * 0.3086  # or 0.2125
     sg = (1 - s) * 0.6094  # or 0.7154
@@ -31,10 +34,15 @@ def getSaturationMatrix(s:float):
     return Matrix(((sr + s, sr, sr), (sg, sg + s, sg), (sb, sb, sb + s)))
 
 
-def gammaCorrect(rgba:list, val:float):
+def gamma_correct(rgba:list, val:float=2.0167):
     """ gamma correct color by value """
     r, g, b, a = rgba
     r = math.pow(r, val)
     g = math.pow(g, val)
     b = math.pow(b, val)
     return [r, g, b, a]
+
+
+def get_average(rgba0:Vector, rgba1:Vector, weight:float):
+    """ returns weighted average of two rgba values """
+    return (rgba1 * weight + rgba0) / (weight + 1)

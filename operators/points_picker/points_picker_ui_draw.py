@@ -25,7 +25,7 @@ import bgl
 from mathutils import Vector
 from bpy_extras import view3d_utils
 
-# Addon imports
+# Module imports
 from ...subtrees.addon_common.cookiecutter.cookiecutter import CookieCutter
 
 
