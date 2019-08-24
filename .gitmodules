@@ -1,6 +1,0 @@
-[submodule "addon_common"]
-	path = addon_common
-	url = https://github.com/CGCookie/addon_common
-[submodule "lib/points_picker"]
-	path = lib/points_picker
-	url = https://github.com/bblanimation/points_picker
