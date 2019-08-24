@@ -22,7 +22,7 @@
 import bpy
 from mathutils import Vector
 
-# Addon imports
+# Module imports
 from ...subtrees.addon_common.cookiecutter.cookiecutter import CookieCutter
 from ...functions.common import tag_redraw_areas
 

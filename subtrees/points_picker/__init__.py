@@ -19,7 +19,7 @@ bl_info = {
     "name"        : "Pick Points",
     "author"      : "Christopher Gearhart <chris@bblanimation.com>",
     "version"     : (1, 0, 0),
-    "blender"     : (2, 79, 0),
+    "blender"     : (2, 80, 0),
     "description" : "",
     "location"    : "View3D > Tools > Pick Points",
     "warning"     : "",  # used for warning icon and text in addons panel
@@ -34,19 +34,17 @@ bl_info = {
 import bpy
 from bpy.types import Scene
 
-# Addon imports
+# Module imports
 from .operators import *
 from .ui import *
-from .lib.classesToRegister import classes
+from .lib import classes_to_register
 from . import addon_updater_ops
 
 def register():
     # register classes
-    for cls in classes:
+    for cls in classes_to_register.classes:
+        make_annotations(cls)
         bpy.utils.register_class(cls)
-
-    # # register app handlers
-    # bpy.app.handlers.load_post.append(handle_something)
 
     # addon updater code and configurations
     addon_updater_ops.register(bl_info)
@@ -55,9 +53,6 @@ def unregister():
     # addon updater unregister
     addon_updater_ops.unregister()
 
-    # # unregister app handlers
-    # bpy.app.handlers.load_post.remove(handle_something)
-
     # unregister classes
-    for cls in classes:
+    for cls in reversed(classes_to_register.classes):
         bpy.utils.unregister_class(cls)
