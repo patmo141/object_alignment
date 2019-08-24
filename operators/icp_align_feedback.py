@@ -26,8 +26,9 @@ from bpy.types import Operator
 from mathutils import Matrix
 from mathutils.bvhtree import BVHTree
 
-# Addon imports
+# Module imports
 from ..functions import *
+
 
 class OBJECT_OT_icp_align_feedback(Operator):
     """Uses ICP alignment to iteratevely aligne two objects and redraws every n iterations.  Slower but better to diagnose errors"""

@@ -15,6 +15,6 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-# from .classesToRegister import *
+# from .classes_to_register import *
 from .preferences import *
-from .reportError import *
+from .report_error import *

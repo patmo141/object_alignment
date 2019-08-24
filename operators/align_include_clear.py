@@ -22,8 +22,9 @@
 import bpy
 from bpy.types import Operator
 
-# Addon imports
+# Module imports
 from ..functions import *
+
 
 class OBJECT_OT_align_include_clear(Operator):
     """Clears the verts from the ICP alignment include group"""

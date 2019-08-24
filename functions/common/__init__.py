@@ -16,7 +16,10 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from .blender import *
+from .bmesh_generators import *
+from .bmesh_utils import *
 from .colors import *
+from .images import *
 from .maths import *
 from .paths import *
 from .python_utils import *

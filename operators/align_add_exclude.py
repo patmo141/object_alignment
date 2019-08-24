@@ -22,7 +22,7 @@
 import bpy
 from bpy.types import Operator
 
-# Addon imports
+# Module imports
 from ..functions import *
 
 

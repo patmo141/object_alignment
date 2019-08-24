@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from .reportError import *
+from .report_error import *
 from .preferences import *
 from ..ui import *
 from ..operators import *

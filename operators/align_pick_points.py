@@ -26,7 +26,7 @@ from bpy.types import Operator
 from mathutils import Vector, Matrix
 from bpy_extras import view3d_utils
 
-# Addon imports
+# Module imports
 from ..functions import *
 from ..lib.points_picker.operators.points_picker import *
 
@@ -202,7 +202,7 @@ class OBJECT_OT_align_pick_points(VIEW3D_OT_points_picker):
         bpy.ops.view3d.localview(override)
 
         self.align_obj.select = False
-        setActiveObj(None)
+        set_active_obj(None)
         override = bpy.context.copy()
         for area in screen.areas:
             if area.as_pointer() not in areas:

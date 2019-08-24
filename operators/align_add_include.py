@@ -22,8 +22,9 @@
 import bpy
 from bpy.types import Operator
 
-# Addon imports
+# Module imports
 from ..functions import *
+
 
 class OBJECT_OT_align_add_include(Operator):
     """Adds a vertex group and puts in weight paint mode"""

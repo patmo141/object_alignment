@@ -21,7 +21,7 @@ import numpy as np
 # Blender imports
 # NONE!
 
-# Addon imports
+# Module imports
 from .common import *
 
 

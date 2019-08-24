@@ -27,7 +27,7 @@ from bpy.types import Object
 # Module imports
 from .blender import *
 from .maths import mathutils_mult
-from .python_utils import confirmIter
+from .python_utils import confirm_iter
 
 
 def apply_transform(obj:Object, location:bool=True, rotation:bool=True, scale:bool=True):
@@ -38,31 +38,36 @@ def apply_transform(obj:Object, location:bool=True, rotation:bool=True, scale:bo
     s_mat_x = Matrix.Scale(scale.x, 4, Vector((1, 0, 0)))
     s_mat_y = Matrix.Scale(scale.y, 4, Vector((0, 1, 0)))
     s_mat_z = Matrix.Scale(scale.z, 4, Vector((0, 0, 1)))
-    if scale:    m.transform(mathutils_mult(s_mat_x, s_mat_y, s_mat_z))
-    else:        obj.scale = scale
-    if rotation: m.transform(rot.to_matrix().to_4x4())
-    else:        obj.rotation_euler = rot.to_euler()
-    if location: m.transform(Matrix.Translation(loc))
-    else:        obj.location = loc
+    if scale:
+        m.transform(mathutils_mult(s_mat_x, s_mat_y, s_mat_z))
+    else:
+        obj.scale = scale
+    if rotation:
+        m.transform(rot.to_matrix().to_4x4())
+    else:
+        obj.rotation_euler = rot.to_euler()
+    if location:
+        m.transform(Matrix.Translation(loc))
+    else:
+        obj.location = loc
 
 
 def parent_clear(objs, apply_transform:bool=True):
     """ efficiently clear parent """
     # select(objs, active=True, only=True)
-    # bpy.ops.object.parent_clear(type='CLEAR_KEEP_TRANSFORM')
-    objs = confirmIter(objs)
+    # bpy.ops.object.parent_clear(type="CLEAR_KEEP_TRANSFORM")
+    objs = confirm_iter(objs)
     if apply_transform:
         for obj in objs:
-            obj.rotation_mode = "XYZ"
-            loc, rot, scale = obj.matrix_world.decompose()
-            obj.location = loc
-            obj.rotation_euler = rot.to_euler()
-            obj.scale = scale
-    for obj in objs:
-        obj.parent = None
+            last_mx = obj.matrix_world.copy()
+            obj.parent = None
+            obj.matrix_world = last_mx
+    else:
+        for obj in objs:
+            obj.parent = None
 
 
-def getBoundsBF(obj:Object):
+def get_bounds(obj:Object):
     """ brute force method for obtaining object bounding box """
     # initialize min and max
     min = Vector((math.inf, math.inf, math.inf))
@@ -105,7 +110,7 @@ def bounds(obj:Object, local:bool=False, use_adaptive_domain:bool=True):
 
     """
 
-    local_coords = getBoundsBF(obj) if is_smoke(obj) and is_adaptive(obj) and not use_adaptive_domain else obj.bound_box[:]
+    local_coords = get_bounds(obj) if is_smoke(obj) and is_adaptive(obj) and not use_adaptive_domain else obj.bound_box[:]
     om = obj.matrix_world
 
     if not local:
@@ -115,35 +120,32 @@ def bounds(obj:Object, local:bool=False, use_adaptive_domain:bool=True):
         coords = [p[:] for p in local_coords]
 
     rotated = zip(*coords[::-1])
-    getMax = lambda i: max([co[i] for co in coords])
-    getMin = lambda i: min([co[i] for co in coords])
+    get_max = lambda i: max([co[i] for co in coords])
+    get_min = lambda i: min([co[i] for co in coords])
 
     info = lambda: None
-    info.max = Vector((getMax(0), getMax(1), getMax(2)))
-    info.min = Vector((getMin(0), getMin(1), getMin(2)))
+    info.max = Vector((get_max(0), get_max(1), get_max(2)))
+    info.min = Vector((get_min(0), get_min(1), get_min(2)))
     info.mid = (info.min + info.max) / 2
     info.dist = info.max - info.min
 
     return info
 
 
-def setObjOrigin(obj:Object, loc:Vector):
+def set_obj_origin(obj:Object, loc:Vector):
     """ set object origin """
     l, r, s = obj.matrix_world.decompose()
-    l_mat = Matrix.Translation(l)
     r_mat = r.to_matrix().to_4x4()
     s_mat_x = Matrix.Scale(s.x, 4, Vector((1, 0, 0)))
     s_mat_y = Matrix.Scale(s.y, 4, Vector((0, 1, 0)))
     s_mat_z = Matrix.Scale(s.z, 4, Vector((0, 0, 1)))
     s_mat = mathutils_mult(s_mat_x, s_mat_y, s_mat_z)
-    m = obj.data
-    mx = mathutils_mult((obj.matrix_world.translation-loc), l_mat, r_mat, s_mat.inverted())
-    mx = mathutils_mult((obj.matrix_world.translation-loc), l_mat, r_mat, s_mat.inverted())
-    m.transform(Matrix.Translation(mx))
+    mx = mathutils_mult((obj.matrix_world.translation-loc), r_mat, s_mat.inverted())
+    obj.data.transform(Matrix.Translation(mx))
     obj.matrix_world.translation = loc
 
 
-def transformToWorld(vec:Vector, mat:Matrix, junk_bme:bmesh=None):
+def transform_to_world(vec:Vector, mat:Matrix, junk_bme:bmesh=None):
     """ transfrom vector to world space from 'mat' matrix local space """
     # decompose matrix
     loc = mat.to_translation()
@@ -153,9 +155,9 @@ def transformToWorld(vec:Vector, mat:Matrix, junk_bme:bmesh=None):
     if rot != Euler((0, 0, 0), "XYZ"):
         junk_bme = bmesh.new() if junk_bme is None else junk_bme
         v1 = junk_bme.verts.new(vec)
-        bmesh.ops.rotate(junk_bme, verts=[v1], cent=-loc, matrix=Matrix.Rotation(rot.x, 3, 'X'))
-        bmesh.ops.rotate(junk_bme, verts=[v1], cent=-loc, matrix=Matrix.Rotation(rot.y, 3, 'Y'))
-        bmesh.ops.rotate(junk_bme, verts=[v1], cent=-loc, matrix=Matrix.Rotation(rot.z, 3, 'Z'))
+        bmesh.ops.rotate(junk_bme, verts=[v1], cent=-loc, matrix=Matrix.Rotation(rot.x, 3, "X"))
+        bmesh.ops.rotate(junk_bme, verts=[v1], cent=-loc, matrix=Matrix.Rotation(rot.y, 3, "Y"))
+        bmesh.ops.rotate(junk_bme, verts=[v1], cent=-loc, matrix=Matrix.Rotation(rot.z, 3, "Z"))
         vec = v1.co
     # apply scale
     vec = vec * scale
@@ -164,7 +166,7 @@ def transformToWorld(vec:Vector, mat:Matrix, junk_bme:bmesh=None):
     return vec
 
 
-def transformToLocal(vec:Vector, mat:Matrix, junk_bme:bmesh=None):
+def transform_to_local(vec:Vector, mat:Matrix, junk_bme:bmesh=None):
     """ transfrom vector to local space of 'mat' matrix """
     # decompose matrix
     loc = mat.to_translation()
@@ -176,8 +178,8 @@ def transformToLocal(vec:Vector, mat:Matrix, junk_bme:bmesh=None):
     if rot != Euler((0, 0, 0), "XYZ"):
         junk_bme = bmesh.new() if junk_bme is None else junk_bme
         v1 = junk_bme.verts.new(vec)
-        bmesh.ops.rotate(junk_bme, verts=[v1], cent=loc, matrix=Matrix.Rotation(-rot.z, 3, 'Z'))
-        bmesh.ops.rotate(junk_bme, verts=[v1], cent=loc, matrix=Matrix.Rotation(-rot.y, 3, 'Y'))
-        bmesh.ops.rotate(junk_bme, verts=[v1], cent=loc, matrix=Matrix.Rotation(-rot.x, 3, 'X'))
+        bmesh.ops.rotate(junk_bme, verts=[v1], cent=loc, matrix=Matrix.Rotation(-rot.z, 3, "Z"))
+        bmesh.ops.rotate(junk_bme, verts=[v1], cent=loc, matrix=Matrix.Rotation(-rot.y, 3, "Y"))
+        bmesh.ops.rotate(junk_bme, verts=[v1], cent=loc, matrix=Matrix.Rotation(-rot.x, 3, "X"))
         vec = v1.co
     return vec

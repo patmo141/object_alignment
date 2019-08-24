@@ -20,11 +20,15 @@ import math
 
 # Blender imports
 import bpy
-from bpy.app.handlers import persistent
+import bmesh
+from mathutils import Vector
 
-# Addon imports
-from ..functions import *
+# Module imports
+from .python_utils import *
 
-# @persistent
-# def handle_something(scn):
-#     pass
+
+def smooth_bm_faces(faces:iter):
+    """ set given bmesh faces to smooth """
+    faces = confirm_iter(faces)
+    for f in faces:
+        f.smooth = True

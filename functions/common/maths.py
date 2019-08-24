@@ -16,7 +16,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # System imports
-# NONE!
+import math
 
 # Blender imports
 from mathutils import Matrix, Vector
@@ -25,14 +25,14 @@ from mathutils import Matrix, Vector
 from .wrappers import blender_version_wrapper
 
 
-@blender_version_wrapper('<=','2.79')
+@blender_version_wrapper("<=","2.79")
 def mathutils_mult(*argv):
     """ elementwise multiplication for vectors, matrices, etc. """
     result = argv[0]
     for arg in argv[1:]:
         result = result * arg
     return result
-@blender_version_wrapper('>=','2.80')
+@blender_version_wrapper(">=","2.80")
 def mathutils_mult(*argv):
     """ elementwise multiplication for vectors, matrices, etc. """
     result = argv[0]
@@ -51,6 +51,11 @@ def vec_div(v1:Vector, v2:Vector):
     return Vector(e1 / e2 for e1, e2 in zip(v1, v2))
 
 
+def vec_mod(v1:Vector, v2:Vector):
+    """ componentwise modulo for vectors """
+    return Vector(e1 % e2 for e1, e2 in zip(v1, v2))
+
+
 def vec_remainder(v1:Vector, v2:Vector):
     """ componentwise remainder for vectors """
     return Vector(e1 % e2 for e1, e2 in zip(v1, v2))
@@ -63,12 +68,20 @@ def vec_abs(v1:Vector):
 
 def vec_conv(v1, innerType:type=int, outerType:type=Vector):
     """ convert type of items in iterable """
-    return outerType([innerType(x) for x in v1])
+    return outerType([innerType(e1) for e1 in v1])
 
 
-def vec_round(v1:Vector, precision:int=0):
-    """ round items in vector """
-    return Vector(round(e1, precision) for e1 in v1)
+def vec_round(v1:Vector, precision:int=0, round_type="ROUND"):
+    """ round items in Vector """
+    if round_type == "ROUND":
+        lst = [round(e1, precision) for e1 in v1]
+    elif round_type == "FLOOR":
+        prec = 10**precision
+        lst = [(math.floor(e1 * prec)) / prec for e1 in v1]
+    elif round_type in ("CEILING", "CEIL"):
+        prec = 10**precision
+        lst = [(math.ceil(e1 * prec)) / prec for e1 in v1]
+    return Vector(lst)
 
 
 def mean(lst:list):
