@@ -222,8 +222,8 @@ class OBJECT_OT_align_pick_points(Operator):
                 self.de_localize(context)
                 self.align_obj(context)
 
-                context.scene.objects.active = self.obj_align
-                self.obj_align.select = True
+                context.view_layer.objects.active = self.obj_align
+                self.obj_align.select_set(True)
                 self.obj_base = True
 
                 return {'FINISHED'}
