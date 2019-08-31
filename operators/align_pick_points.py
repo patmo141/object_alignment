@@ -69,11 +69,14 @@ def draw_callback_view(self, context):
     bgl.glPointSize(8)
     if context.area.x == self.area_align.x:
         if not self.align_shader:
-            self.
+            return
+        
         self.align_shader.bind()
         self.align_shader.uniform_float("color", (1,0,1,1))
         self.align_batch.draw(self.align_shader)
     else:
+        if not self.base_shader:
+            return
         self.base_shader.bind()
         self.base_shader.uniform_float("color", (1,1,0,1))
         self.base_batch.draw(self.base_shader)
