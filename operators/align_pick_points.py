@@ -54,9 +54,9 @@ def draw_callback_px(self, context):
 
     #draw_3d_points_revised(context, points, color, 4)
 
-    #for i, vec in enumerate(points):
-    #    ind = str(i)
-    #    draw_3d_text(context, font_id, ind, vec)
+    for i, vec in enumerate(points):
+        ind = str(i)
+        draw_3d_text(context, font_id, ind, vec)
 
 
 def draw_callback_view(self, context):
@@ -331,7 +331,7 @@ class OBJECT_OT_align_pick_points(Operator):
         bpy.ops.view3d.view_selected(override)
 
         #Crash Blender?
-        bpy.ops.screen.area_join(min_x=self.area_align.x,min_y=self.area_align.y, max_x=self.area_base.x, max_y=self.area_base.y)
+        bpy.ops.screen.area_join(min_x=self.area_align.x,min_y=self.area_align.y, max_x=self.area_base.x+1, max_y=self.area_base.y+1)
         #bpy.ops.view3d.toolshelf()
 
         #ret = bpy.ops.screen.area_join(min_x=area_base.x,min_y=area_base.y, max_x=area_align.x, max_y=area_align.y)
