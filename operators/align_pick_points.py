@@ -332,7 +332,7 @@ class OBJECT_OT_align_pick_points(Operator):
 
         #Crash Blender?
         bpy.ops.screen.area_join(min_x=self.area_align.x,min_y=self.area_align.y, max_x=self.area_base.x, max_y=self.area_base.y)
-        bpy.ops.view3d.toolshelf()
+        #bpy.ops.view3d.toolshelf()
 
         #ret = bpy.ops.screen.area_join(min_x=area_base.x,min_y=area_base.y, max_x=area_align.x, max_y=area_align.y)
 
