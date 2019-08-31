@@ -116,7 +116,7 @@ class OBJECT_OT_icp_align(Operator):
             context.scene.update()
 
             if d_stats:
-                i = fmod(n,5)
+                i = int(fmod(n,5))
                 conv_t_list[i] = trans.length
                 conv_r_list[i] = abs(quat.angle)
 
