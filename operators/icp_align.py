@@ -50,7 +50,7 @@ class OBJECT_OT_icp_align(Operator):
         start = time.time()
         align_obj = context.object
         base_obj = [obj for obj in context.selected_objects if obj != align_obj][0]
-        base_bvh = BVHTree.FromObject(base_obj, context.depsgraph)
+        base_bvh = BVHTree.FromObject(base_obj, context.evaluated_depsgraph_get())
         align_obj.rotation_mode = 'QUATERNION'
 
         vlist = []
