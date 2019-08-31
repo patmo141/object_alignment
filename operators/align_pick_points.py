@@ -249,9 +249,9 @@ class OBJECT_OT_align_pick_points(Operator):
         obj2_name = [obj for obj in context.selected_objects if obj != context.object][0].name
 
         for ob in context.scene.objects:
-            ob.select = False
+            ob.select_set(False)
 
-        context.scene.objects.active = None
+        bpy.context.view_layer.objects.active= None#context.scene.objects.active = None
 
         #I did this stupid method becuase I was unsure
         #if some things were being "sticky" and not
@@ -260,7 +260,7 @@ class OBJECT_OT_align_pick_points(Operator):
         obj2 = bpy.data.objects[obj2_name]
 
         for ob in bpy.data.objects:
-            if ob.select:
+            if ob.select_set(True):
                 print(ob.name)
 
         screen = context.window.screen
@@ -269,31 +269,31 @@ class OBJECT_OT_align_pick_points(Operator):
             if area.type == 'VIEW_3D':
                 break
 
-        bpy.ops.view3d.toolshelf() #close the first toolshelf
+        #bpy.ops.view3d.toolshelf() #close the first toolshelf
         override = context.copy()
         override['area'] = area
 
         self.area_align = area
 
-        bpy.ops.screen.area_split(override, direction='VERTICAL', factor=0.5, mouse_x=-100, mouse_y=-100)
+        bpy.ops.screen.area_split(direction='VERTICAL', factor=0.5, cursor=(100,-100))#bpy.ops.screen.area_split(override, direction='VERTICAL', factor=0.5, mouse_x=-100, mouse_y=-100)
         #bpy.ops.view3d.toolshelf() #close the 2nd toolshelf
 
-        context.scene.objects.active = obj1
-        obj1.select = True
-        obj2.select = False
+        bpy.context.view_layer.objects.active = obj1
+        obj1.select_set(True)
+        obj2.select_set(False)
 
         bpy.ops.view3d.localview(override)
 
-        obj1.select = False
-        context.scene.objects.active = None
+        obj1.select_set(False)
+        bpy.context.view_layer.objects.active = None
         override = context.copy()
         for area in screen.areas:
             if area.as_pointer() not in areas:
                 override['area'] = area
                 self.area_base = area
                 bpy.ops.object.select_all(action = 'DESELECT')
-                context.scene.objects.active = obj2
-                obj2.select = True
+                bpy.context.view_layer.objects.active = obj2
+                obj2.select_set(True)
                 override['selected_objects'] = [obj2]
                 override['selected_editable_objects'] = [obj2]
                 override['object'] = obj2
