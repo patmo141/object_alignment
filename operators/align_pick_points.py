@@ -67,6 +67,7 @@ def draw_callback_px(self, context):
 
 def draw_callback_view(self, context):
     bgl.glPointSize(8)
+    print('draw view!')
     if context.area.x == self.area_align.x:
         if not self.align_shader:
             return
@@ -158,6 +159,7 @@ class OBJECT_OT_align_pick_points(Operator):
                     print('hit! align_obj %s' % self.obj_align.name)
                     #local space of align object
                     self.align_points.append(hit)
+                    self.create_batch_align()
 
             else:
 
@@ -179,7 +181,7 @@ class OBJECT_OT_align_pick_points(Operator):
                     print('hit! base_obj %s' % self.obj_base.name)
                     #points in local space of align object
                     self.base_points.append(self.obj_align.matrix_world.inverted() @ self.obj_base.matrix_world @ hit)
-
+                    self.create_batch_base()
 
             return {'RUNNING_MODAL'}
 
@@ -348,13 +350,15 @@ class OBJECT_OT_align_pick_points(Operator):
 
     
     def create_batch_base(self):
-        vertices = [(v.x, v.y, v.z) for v in self.base_points]    
+        verts = [self.obj_align.matrix_world @ p for p in self.base_points]
+        vertices = [(v.x, v.y, v.z) for v in verts]    
         self.base_shader = gpu.shader.from_builtin('3D_UNIFORM_COLOR')
         self.base_batch = batch_for_shader(self.base_shader, 'POINTS', {"poS":vertices})
         
         
     def create_batch_align(self):
-        vertices = [(v.x, v.y, v.z) for v in self.align_points]    
+        verts = [self.obj_align.matrix_world @ p for p in self.align_points]
+        vertices = [(v.x, v.y, v.z) for v in verts]      
         self.align_shader = gpu.shader.from_builtin('3D_UNIFORM_COLOR')
         self.align_batch = batch_for_shader(self.base_shader, 'POINTS', {"poS":vertices})
         
