@@ -108,7 +108,7 @@ class OBJECT_OT_icp_align(Operator):
                 for z in range(0,4):
                     new_mat[y][z] = M[y][z]
 
-            align_obj.matrix_world = align_obj.matrix_world * new_mat
+            align_obj.matrix_world = align_obj.matrix_world @ new_mat
             trans = new_mat.to_translation()
             quat = new_mat.to_quaternion()
 

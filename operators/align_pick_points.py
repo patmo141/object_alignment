@@ -129,7 +129,7 @@ class OBJECT_OT_align_pick_points(Operator):
 
                 view_vector = view3d_utils.region_2d_to_vector_3d(region, rv3d, coord)
                 ray_origin = view3d_utils.region_2d_to_origin_3d(region, rv3d, coord)
-                ray_target = ray_origin + (view_vector * ray_max)
+                ray_target = ray_origin + (ray_max * view_vector)
 
                 print('in the align object window')
                 (d, (ok,hit, normal, face_index)) = ray_cast_region2d(region, rv3d, coord, self.obj_align)
@@ -150,14 +150,14 @@ class OBJECT_OT_align_pick_points(Operator):
                 coord = (event.mouse_x - region.x, event.mouse_y - region.y)
                 view_vector = view3d_utils.region_2d_to_vector_3d(region, rv3d, coord)
                 ray_origin = view3d_utils.region_2d_to_origin_3d(region, rv3d, coord)
-                ray_target = ray_origin + (view_vector * ray_max)
+                ray_target = ray_origin + (ray_max * view_vector)
 
                 print('in the base object window')
                 (d, (ok,hit, normal, face_index)) = ray_cast_region2d(region, rv3d, coord, self.obj_base)
                 if ok:
                     print('hit! base_obj %s' % self.obj_base.name)
                     #points in local space of align object
-                    self.base_points.append(self.obj_align.matrix_world.inverted() * self.obj_base.matrix_world * hit)
+                    self.base_points.append(self.obj_align.matrix_world.inverted() @ self.obj_base.matrix_world @ hit)
 
 
             return {'RUNNING_MODAL'}
@@ -375,7 +375,7 @@ class OBJECT_OT_align_pick_points(Operator):
 
         #because we calced transform in local space
         #it's this easy to update the obj...
-        self.obj_align.matrix_world = self.obj_align.matrix_world * new_mat
+        self.obj_align.matrix_world = self.obj_align.matrix_world @ new_mat
 
         self.obj_align.update_tag()
         context.scene.update()
