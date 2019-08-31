@@ -71,7 +71,7 @@ def draw_3d_points_revised(context, points, color, size):
 
     for vec in points:
 
-        vec_4d = perspective_matrix * vec.to_4d()
+        vec_4d = perspective_matrix @ vec.to_4d()
         if vec_4d.w > 0.0:
             x = region_mid_width + region_mid_width * (vec_4d.x / vec_4d.w)
             y = region_mid_height + region_mid_height * (vec_4d.y / vec_4d.w)
@@ -87,7 +87,7 @@ def draw_3d_text(context, font_id, text, vec):
     region_mid_height = region.height / 2.0
 
     perspective_matrix = region3d.perspective_matrix.copy()
-    vec_4d = perspective_matrix * vec.to_4d()
+    vec_4d = perspective_matrix @ vec.to_4d()
     if vec_4d.w > 0.0:
         x = region_mid_width + region_mid_width * (vec_4d.x / vec_4d.w)
         y = region_mid_height + region_mid_height * (vec_4d.y / vec_4d.w)
@@ -117,8 +117,8 @@ def get_ray_origin(ray_origin, ray_direction, ob):
     if abs(ray_direction.x)>0.0001: planes += [(bm,x), (bM,-x)]
     if abs(ray_direction.y)>0.0001: planes += [(bm,y), (bM,-y)]
     if abs(ray_direction.z)>0.0001: planes += [(bm,z), (bM,-z)]
-    dists = [get_ray_plane_intersection(ray_origin,ray_direction,mx*p0,q*no) for p0,no in planes]
-    return ray_origin + ray_direction * min(dists)
+    dists = [get_ray_plane_intersection(ray_origin,ray_direction,mx@p0,q@no) for p0,no in planes]
+    return ray_origin + ray_direction @ min(dists)
 
 # Jon Denning for Retopoflow
 def ray_cast_region2d(region, rv3d, screen_coord, obj):
@@ -139,7 +139,7 @@ def ray_cast_region2d(region, rv3d, screen_coord, obj):
     bver = '%03d.%03d.%03d' % (bpy.app.version[0],bpy.app.version[1],bpy.app.version[2])
     if (bver < '002.072.000') and not rv3d.is_perspective: mult *= -1
 
-    st, en = imx*(o-mult*back*d), imx*(o+mult*d)
+    st, en = imx@(o-mult*back*d), imx@(o+mult*d)
 
     if bversion() < '002.077.000':
         hit = obj.ray_cast(st,en)
