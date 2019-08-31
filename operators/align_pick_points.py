@@ -378,4 +378,4 @@ class OBJECT_OT_align_pick_points(Operator):
         self.obj_align.matrix_world = self.obj_align.matrix_world @ new_mat
 
         self.obj_align.update_tag()
-        context.scene.update()
+        context.view_layer.update()
