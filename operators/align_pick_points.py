@@ -353,14 +353,14 @@ class OBJECT_OT_align_pick_points(Operator):
         verts = [self.obj_align.matrix_world @ p for p in self.base_points]
         vertices = [(v.x, v.y, v.z) for v in verts]    
         self.base_shader = gpu.shader.from_builtin('3D_UNIFORM_COLOR')
-        self.base_batch = batch_for_shader(self.base_shader, 'POINTS', {"poS":vertices})
+        self.base_batch = batch_for_shader(self.base_shader, 'POINTS', {"pos":vertices})
         
         
     def create_batch_align(self):
         verts = [self.obj_align.matrix_world @ p for p in self.align_points]
         vertices = [(v.x, v.y, v.z) for v in verts]      
         self.align_shader = gpu.shader.from_builtin('3D_UNIFORM_COLOR')
-        self.align_batch = batch_for_shader(self.base_shader, 'POINTS', {"poS":vertices})
+        self.align_batch = batch_for_shader(self.base_shader, 'POINTS', {"pos":vertices})
         
     def de_localize(self,context):
 
