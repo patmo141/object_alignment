@@ -1,0 +1,31 @@
+Original Papers First introduced by Chen and Medioni (1991) and Besl and McKay (1992).
+
+ 
+1. Chen, Yang; Gerard Medioni (1991). 
+ "Object modelling by registration of multiple range images". 
+ Image Vision Comput. 
+ 10 (3): 145–155. doi:10.1016/0262-8856(92)90066-C.
+ 
+2. Besl, Paul J.; N.D. McKay (1992). 
+ "A Method for Registration of 3-D Shapes". 
+ IEEE Transactions on Pattern Analysis and Machine Intelligence. 
+ 14 (2): 239–256. doi:10.1109/34.121791.
+ 
+3.Transformations Python Library
+Author: Christoph Gohlke <https://www.lfd.uci.edu/~gohlke/>`_
+Organization:   Laboratory for Fluorescence Dynamics. University of California, Irvine
+https://www.lfd.uci.edu/~gohlke/code/transformations.py.html
+
+4. FINDING OPTIMAL ROTATION AND TRANSLATION BETWEEN CORRESPONDING 3D POINTS
+Author: Nghia Ho, nghiaho12@yahoo.com
+Organization: 
+https://nghiaho.com/?page_id=671
+http://nghiaho.com/uploads/code/rigid_transform_3D.py
+
+5. Blender Implementation, Filtering Code, UI, BVH Acceleration
+Modal Operator
+Patrick Moore: patrick.moore.bu@gmail.com
+working as a hobby and later update for D3tool.com
+
+
+### Add Additional Citation Below ###
