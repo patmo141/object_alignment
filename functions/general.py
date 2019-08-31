@@ -273,7 +273,7 @@ def make_pairs(align_obj, base_obj, base_bvh, vlist, thresh, sample = 0, calc_st
 
             vert = align_obj.data.vertices[vert_ind]
             #closest point for point clouds.  Local space of base obj
-            co_find = imx2 * (mx1 * vert.co)
+            co_find = imx2 @ (mx1 @ vert.co)
 
             #closest surface point for triangle mesh
             #this is set up for a  well modeled aligning object with
@@ -285,12 +285,12 @@ def make_pairs(align_obj, base_obj, base_bvh, vlist, thresh, sample = 0, calc_st
                 #res, co1, normal, face_index = base_obj.closest_point_on_mesh(co_find)
                 co1, n, face_index, d = base_bvh.find_nearest(co_find)
 
-            dist = (mx2 * co_find - mx2 * co1).length
+            dist = (mx2 @ co_find - mx2 @ co1).length
             #d is now returned by bvh.find
             #dist = mx2.to_scale() * d
             if face_index != -1 and dist < thresh:
                 verts1.append(vert.co)
-                verts2.append(imx1 * (mx2 * co1))
+                verts2.append(imx1 @ (mx2 @ co1))
                 if calc_stats:
                     dists.append(dist)
 
