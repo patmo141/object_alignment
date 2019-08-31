@@ -195,7 +195,8 @@ class OBJECT_OT_icp_align_feedback(Operator):
             quat = new_mat.to_quaternion()
 
             align_obj.update_tag()
-            context.scene.update()
+            #context.scene.update()
+            context.view_layer.update()
 
             if d_stats:
                 i = int(fmod(n,5))

@@ -50,7 +50,7 @@ class OBJECT_OT_icp_align(Operator):
         start = time.time()
         align_obj = context.object
         base_obj = [obj for obj in context.selected_objects if obj != align_obj][0]
-        base_bvh = BVHTree.FromObject(base_obj, context.scene)
+        base_bvh = BVHTree.FromObject(base_obj, context.depsgraph)
         align_obj.rotation_mode = 'QUATERNION'
 
         vlist = []
@@ -113,7 +113,8 @@ class OBJECT_OT_icp_align(Operator):
             quat = new_mat.to_quaternion()
 
             align_obj.update_tag()
-            context.scene.update()
+            context.view_layer.update()
+            #context.scene.update()
 
             if d_stats:
                 i = int(fmod(n,5))
