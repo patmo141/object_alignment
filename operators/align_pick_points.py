@@ -22,6 +22,12 @@ import numpy as np
 # Blender imports
 import bpy
 import blf
+import bgl
+import gpu
+
+from gpu_extras.batch import batch_for_shader
+
+
 from bpy.types import Operator
 from mathutils import Matrix
 from bpy_extras import view3d_utils
@@ -60,7 +66,19 @@ def draw_callback_px(self, context):
 
 
 def draw_callback_view(self, context):
-    
+    bgl.glPointSize(8)
+    if context.area.x == self.area_align.x:
+        if not self.align_shader:
+            self.
+        self.align_shader.bind()
+        self.align_shader.uniform_float("color", (1,0,1,1))
+        self.align_batch.draw(self.align_shader)
+    else:
+        self.base_shader.bind()
+        self.base_shader.uniform_float("color", (1,1,0,1))
+        self.base_batch.draw(self.base_shader)
+        
+    bgl.glPointSize(1)
     pass
     
     
@@ -166,8 +184,10 @@ class OBJECT_OT_align_pick_points(Operator):
 
             if event.mouse_x > self.area_align.x and event.mouse_x < self.area_align.x + self.area_align.width:
                 self.align_points.pop()
+                self.create_batch_align()
             else:
                 self.base_points.pop()
+                self.create_batch_base()
 
             return {'RUNNING_MODAL'}
 
@@ -309,6 +329,10 @@ class OBJECT_OT_align_pick_points(Operator):
         self.align_points = []
         self.base_points = []
 
+        self.base_batch = None
+        self.base_shader = None
+        self.align_batch = None
+        self.align_shader = None
         context.window_manager.modal_handler_add(self)
         self._2Dhandle = bpy.types.SpaceView3D.draw_handler_add(draw_callback_px, (self, context), 'WINDOW', 'POST_PIXEL')
         self._3Dhandle = bpy.types.SpaceView3D.draw_handler_add(draw_callback_view, (self, context), 'WINDOW', 'POST_VIEW')
@@ -319,6 +343,18 @@ class OBJECT_OT_align_pick_points(Operator):
     #############################################
     # class methods
 
+    
+    def create_batch_base(self):
+        vertices = [(v.x, v.y, v.z) for v in self.base_points]    
+        self.base_shader = gpu.shader.from_builtin('3D_UNIFORM_COLOR')
+        self.base_batch = batch_for_shader(self.base_shader, 'POINTS', {"poS":vertices})
+        
+        
+    def create_batch_align(self):
+        vertices = [(v.x, v.y, v.z) for v in self.align_points]    
+        self.align_shader = gpu.shader.from_builtin('3D_UNIFORM_COLOR')
+        self.align_batch = batch_for_shader(self.base_shader, 'POINTS', {"poS":vertices})
+        
     def de_localize(self,context):
 
         override = context.copy()
