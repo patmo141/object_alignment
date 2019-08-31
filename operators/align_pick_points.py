@@ -38,23 +38,32 @@ def draw_callback_px(self, context):
     y = context.region.height
     dims = blf.dimensions(0, 'A')
 
-    blf.position(font_id, 10, y - 20 - dims[1], 0)
+    #blf.position(font_id, 10, y - 20 - dims[1], 0)
+    blf.position(font_id, 10, 20 + dims[1], 0)
+    
     blf.size(font_id, 20, 72)
 
     if context.area.x == self.area_align.x:
         blf.draw(font_id, "Align: "+ self.align_msg)
-        points = [self.obj_align.matrix_world * p for p in self.align_points]
+        points = [self.obj_align.matrix_world @ p for p in self.align_points]
         color = (1,0,0,1)
     else:
         blf.draw(font_id, "Base: " + self.base_msg)
-        points = [self.obj_align.matrix_world * p for p in self.base_points]
+        points = [self.obj_align.matrix_world @ p for p in self.base_points]
         color = (0,1,0,1)
 
-    draw_3d_points_revised(context, points, color, 4)
+    #draw_3d_points_revised(context, points, color, 4)
 
-    for i, vec in enumerate(points):
-        ind = str(i)
-        draw_3d_text(context, font_id, ind, vec)
+    #for i, vec in enumerate(points):
+    #    ind = str(i)
+    #    draw_3d_text(context, font_id, ind, vec)
+
+
+def draw_callback_view(self, context):
+    
+    pass
+    
+    
 
 class OBJECT_OT_align_pick_points(Operator):
     """Align two objects with 3 or more pair of picked points"""
@@ -201,13 +210,15 @@ class OBJECT_OT_align_pick_points(Operator):
             return {'PASS_THROUGH'}
 
         elif event.type in {'ESC'}:
-            bpy.types.SpaceView3D.draw_handler_remove(self._handle, 'WINDOW')
+            bpy.types.SpaceView3D.draw_handler_remove(self._2Dhandle, 'WINDOW')
+            bpy.types.SpaceView3D.draw_handler_remove(self._3Dhandle, 'WINDOW')
             return {'CANCELLED'}
 
         elif event.type == 'RET':
 
             if len(self.align_points) >= 3 and len(self.base_points) >= 3 and len(self.align_points) == len(self.base_points):
-                bpy.types.SpaceView3D.draw_handler_remove(self._handle, 'WINDOW')
+                bpy.types.SpaceView3D.draw_handler_remove(self._2Dhandle, 'WINDOW')
+                bpy.types.SpaceView3D.draw_handler_remove(self._3Dhandle, 'WINDOW')
                 self.de_localize(context)
                 self.align_obj(context)
 
@@ -299,7 +310,10 @@ class OBJECT_OT_align_pick_points(Operator):
         self.base_points = []
 
         context.window_manager.modal_handler_add(self)
-        self._handle = bpy.types.SpaceView3D.draw_handler_add(draw_callback_px, (self, context), 'WINDOW', 'POST_PIXEL')
+        self._2Dhandle = bpy.types.SpaceView3D.draw_handler_add(draw_callback_px, (self, context), 'WINDOW', 'POST_PIXEL')
+        self._3Dhandle = bpy.types.SpaceView3D.draw_handler_add(draw_callback_view, (self, context), 'WINDOW', 'POST_VIEW')
+        
+        
         return {'RUNNING_MODAL'}
 
     #############################################
