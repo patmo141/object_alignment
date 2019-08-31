@@ -258,7 +258,7 @@ class OBJECT_OT_icp_align_feedback(Operator):
 
         self.align_obj.update_tag()
         if self.d_stats:
-            i = fmod(self.total_iters,5)
+            i = int(fmod(self.total_iters,5))
             self.conv_t_list[i] = trans.length
             self.conv_r_list[i] = abs(quat.angle)
 

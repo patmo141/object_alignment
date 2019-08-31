@@ -116,7 +116,7 @@ class OBJECT_OT_icp_align(Operator):
             context.scene.update()
 
             if d_stats:
-                i = fmod(n,5)
+                i = int(fmod(n,5))
                 conv_t_list[i] = trans.length
                 conv_r_list[i] = abs(quat.angle)
 
@@ -125,7 +125,7 @@ class OBJECT_OT_icp_align(Operator):
 
 
                     print('Converged in %s iterations' % str(n+1))
-                    print('Final Translation: %f ' % conv_t_list[i])
+                    print('Final Translation: %d ' % conv_t_list[i])
                     print('Final Avg Dist: %f' % d_stats[0])
                     print('Final St Dev %f' % d_stats[1])
                     print('Avg last 5 rotation angle: %f' % np.mean(conv_r_list))
@@ -134,7 +134,7 @@ class OBJECT_OT_icp_align(Operator):
         time_taken = time.time() - start
         if use_target and not converged:
             print('Maxed out iterations')
-            print('Final Translation: %f ' % conv_t_list[i])
+            print('Final Translation: %d ' % conv_t_list[i])
             print('Final Avg Dist: %f' % d_stats[0])
             print('Final St Dev %f' % d_stats[1])
             print('Avg last 5 rotation angle: %f' % np.mean(conv_r_list))
