@@ -54,7 +54,7 @@ class OBJECT_OT_icp_align_feedback(Operator):
         self.start = time.time()
         self.align_obj = context.object
         self.base_obj = [obj for obj in context.selected_objects if obj != self.align_obj][0]
-        self.base_bvh = BVHTree.FromObject(self.base_obj, context.scene)
+        self.base_bvh = BVHTree.FromObject(self.base_obj,  context.evaluated_depsgraph_get())
         self.align_obj.rotation_mode = 'QUATERNION'
 
         self.vlist = []
@@ -132,7 +132,7 @@ class OBJECT_OT_icp_align_feedback(Operator):
         start = time.time()
         align_obj = context.object
         base_obj = [obj for obj in context.selected_objects if obj != align_obj][0]
-        base_bvh = BVHTree.FromObject(base_obj, context.scene)
+        base_bvh = BVHTree.FromObject(base_obj,  context.evaluated_depsgraph_get())
         align_obj.rotation_mode = 'QUATERNION'
 
         vlist = []
