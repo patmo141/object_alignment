@@ -46,7 +46,7 @@ class OBJECT_OT_icp_align_feedback(Operator):
 
     def invoke(self,context, event):
         wm = context.window_manager
-        self._timer = wm.event_timer_add(0.01, context.window)
+        self._timer = wm.event_timer_add(time_step = 0.01, window = context.window)
         wm.modal_handler_add(self)
 
         settings = get_addon_preferences()
@@ -190,7 +190,7 @@ class OBJECT_OT_icp_align_feedback(Operator):
                 for z in range(0,4):
                     new_mat[y][z] = M[y][z]
 
-            align_obj.matrix_world = align_obj.matrix_world * new_mat
+            align_obj.matrix_world = align_obj.matrix_world @ new_mat
             trans = new_mat.to_translation()
             quat = new_mat.to_quaternion()
 
@@ -253,7 +253,7 @@ class OBJECT_OT_icp_align_feedback(Operator):
             for z in range(0,4):
                 new_mat[y][z] = M[y][z]
 
-        self.align_obj.matrix_world = self.align_obj.matrix_world * new_mat
+        self.align_obj.matrix_world = self.align_obj.matrix_world @ new_mat
         trans = new_mat.to_translation()
         quat = new_mat.to_quaternion()
 
