@@ -14,6 +14,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#https://cognitivewaves.wordpress.com/opengl-vbo-shader-vao/#shader-with-vertex-buffer-object
 
 # System imports
 import time
