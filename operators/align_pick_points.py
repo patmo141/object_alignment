@@ -302,6 +302,14 @@ class OBJECT_OT_align_pick_points(Operator):
 
         bpy.ops.screen.area_split(direction='VERTICAL', factor=0.5, cursor=(100,-100))#bpy.ops.screen.area_split(override, direction='VERTICAL', factor=0.5, mouse_x=-100, mouse_y=-100)
         #bpy.ops.view3d.toolshelf() #close the 2nd toolshelf
+        
+#..........Hide sidebar after area split...........................
+        for A in bpy.context.screen.areas:
+            if A.type == 'VIEW_3D' :
+                ctx = bpy.context.copy()
+                ctx['area'] = A
+                bpy.ops.screen.region_toggle(ctx, region_type='UI')
+#...................................................................               
 
         bpy.context.view_layer.objects.active = obj1
         obj1.select_set(True)
@@ -373,8 +381,11 @@ class OBJECT_OT_align_pick_points(Operator):
         bpy.ops.view3d.localview(override)
         bpy.ops.view3d.view_selected(override)
 
-        #Crash Blender?
-        bpy.ops.screen.area_join(min_x=self.area_align.x,min_y=self.area_align.y, max_x=self.area_base.x+1, max_y=self.area_base.y+1)
+#............Crash Blender? Resolve................................
+        xj = int(self.area_align.width + 1)
+        yj = int(self.area_align.y + self.area_align.height / 2)
+        bpy.ops.screen.area_join(cursor=(xj,yj))
+#..................................................................
         #bpy.ops.view3d.toolshelf()
 
         bpy.ops.screen.screen_full_area()
