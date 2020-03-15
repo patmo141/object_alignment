@@ -68,7 +68,7 @@ def draw_callback_px(self, context):
 
 def draw_callback_view(self, context):
     bgl.glPointSize(8)
-    print('draw view!')
+    #print('draw view!')
     if context.area.x == self.area_align.x:
         if not self.align_shader:
             return
@@ -304,19 +304,23 @@ class OBJECT_OT_align_pick_points(Operator):
         bpy.ops.screen.area_split(direction='VERTICAL', factor=0.5, cursor=(100,-100))#bpy.ops.screen.area_split(override, direction='VERTICAL', factor=0.5, mouse_x=-100, mouse_y=-100)
         #bpy.ops.view3d.toolshelf() #close the 2nd toolshelf
         
-#..........Hide sidebar after area split...........................
-        for A in bpy.context.screen.areas:
-            if A.type == 'VIEW_3D' :
-                ctx = bpy.context.copy()
-                ctx['area'] = A
-                bpy.ops.screen.region_toggle(ctx, region_type='UI')
-#...................................................................               
 
         bpy.context.view_layer.objects.active = obj1
         obj1.select_set(True)
         obj2.select_set(False)
 
         bpy.ops.view3d.localview(override)
+        
+        
+        #..........Hide sidebar after area split...........................
+        for A in bpy.context.screen.areas:
+            if A.type == 'VIEW_3D' :
+                ctx = bpy.context.copy()
+                ctx['area'] = A
+                bpy.ops.screen.region_toggle(ctx, region_type='UI')
+#...................................................................      
+
+
 
         obj1.select_set(False)
         bpy.context.view_layer.objects.active = None
