@@ -439,15 +439,10 @@ class OBJECT_OT_align_pick_points(Operator):
         #it's this easy to update the obj...
         self.obj_align.matrix_world = self.obj_align.matrix_world @ new_mat
 
-        print(f"Checking take with, current val {take_m_with}")
         if take_m_with == True:
-            print(f"Take_m_with is True")
             for obj in bpy.context.scene.objects:
                 if obj.name[:2] == "m_":
-                    print(f"Moving object: {obj.name}")
-                    print(f"Matrix to world before: {obj.matrix_world}")
                     obj.matrix_world = obj.matrix_world @ new_mat
-                    print(f"Matrix to world after: {obj.matrix_world}")
                     obj.update_tag()
 
 
