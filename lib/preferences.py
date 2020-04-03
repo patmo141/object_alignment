@@ -61,6 +61,10 @@ class ObjectAlignmentPreferences(AddonPreferences):
             name="Use Target",
             description="Calc alignment stats at each iteration to assess convergence. SLower per step, may result in less steps",
             default=True)
+    take_m_with = BoolProperty(
+            name="Take m_ Objects with",
+            description="Applies the same Transformation Matrix to all Objects which start with 'm_'",
+            default=False)
     align_methods =['RIGID','ROT_LOC_SCALE']#,'AFFINE']
     align_items = []
     for index, item in enumerate(align_methods):
@@ -104,6 +108,7 @@ class ObjectAlignmentPreferences(AddonPreferences):
         layout.prop(self, "use_target")
         layout.prop(self, "target_d")
         layout.prop(self, "align_meth")
+        layout.prop(self, "take_m_with")
 
         # updater draw function
         addon_updater_ops.update_settings_ui(self,context)

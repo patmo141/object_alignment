@@ -85,6 +85,7 @@ class OBJECT_OT_icp_align(Operator):
         iters = settings.icp_iterations
         target_d = settings.target_d
         use_target = settings.use_target
+        take_m_with = settings.take_m_with
         factor = round(1/sample)
 
         n = 0
@@ -109,6 +110,18 @@ class OBJECT_OT_icp_align(Operator):
                     new_mat[y][z] = M[y][z]
 
             align_obj.matrix_world = align_obj.matrix_world @ new_mat
+            
+            print(f"Checking take with, current val {take_m_with}")
+            if take_m_with == True:
+                print(f"Take_m_with is True")
+                for obj in bpy.context.scene.objects:
+                    if obj.name[:2] == "m_":
+                        print(f"Moving object: {obj.name}")
+                        print(f"Matrix to world before: {obj.matrix_world}")
+                        obj.matrix_world = obj.matrix_world @ new_mat
+                        print(f"Matrix to world after: {obj.matrix_world}")
+                        obj.update_tag()
+
             trans = new_mat.to_translation()
             quat = new_mat.to_quaternion()
 

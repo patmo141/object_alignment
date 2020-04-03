@@ -90,6 +90,7 @@ class OBJECT_OT_icp_align_feedback(Operator):
         self.iters = settings.icp_iterations
         self.target_d = settings.target_d
         self.use_target = settings.use_target
+        self.take_m_with = settings.take_m_with
         self.sample_factor = round(1/self.sample_fraction)
         self.redraw_frequency = settings.redraw_frequency
 
@@ -167,6 +168,7 @@ class OBJECT_OT_icp_align_feedback(Operator):
         iters = settings.icp_iterations
         target_d = settings.target_d
         use_target = settings.use_target
+        take_m_with = settings.take_m_with
         factor = round(1/sample)
 
         n = 0
