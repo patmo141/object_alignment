@@ -41,8 +41,8 @@ class OBJECT_OT_icp_align(Operator):
     @classmethod
     def poll(cls, context):
         condition_1 = len(context.selected_objects) == 2
-        conidion_2 = context.object.type == 'MESH'
-        return condition_1 and condition_1
+        condition_2 = context.object.type == 'MESH'
+        return condition_1 and condition_2
 
     def execute(self, context):
         settings = get_addon_preferences()
