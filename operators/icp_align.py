@@ -110,7 +110,7 @@ class OBJECT_OT_icp_align(Operator):
                     new_mat[y][z] = M[y][z]
 
             align_obj.matrix_world = align_obj.matrix_world @ new_mat
-            
+            print(f"Final Transformation Matrix is: {new_mat}")
             if take_m_with == True:
                 for obj in bpy.context.scene.objects:
                     if obj.name[:2] == "m_":
