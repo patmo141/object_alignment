@@ -263,6 +263,12 @@ class OBJECT_OT_icp_align_feedback(Operator):
                 new_mat[y][z] = M[y][z]
 
         self.align_obj.matrix_world = self.align_obj.matrix_world @ new_mat
+
+        if take_m_with == True:
+                for obj in bpy.context.scene.objects:
+                    if obj.name[:2] == "m_":
+                        obj.matrix_world = obj.matrix_world @ new_mat
+                        obj.update_tag()
         trans = new_mat.to_translation()
         quat = new_mat.to_quaternion()
 
