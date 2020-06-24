@@ -262,41 +262,48 @@ def make_pairs(align_obj, base_obj, base_bvh, vlist, thresh, sample = 0, calc_st
     if calc_stats:
         dists = []
 
+    #RAUL  we are sampling on every iteration!
+    start = time.time()
     #downsample if needed
     if sample > 1:
         vlist = vlist[0::sample]
+    sample_time = time.time()
+    print('    Took %f seconds to downsample' % (sample_time - start))
 
-    if thresh > 0:
+    if thresh > 0: #THIS MAKES NO SENSE, WHEN WOULD WE EVER NOT DO THIS
         #filter data based on an initial starting dist
         #eacg time in the routine..the limit should go down
         for vert_ind in vlist:
 
             vert = align_obj.data.vertices[vert_ind]
             #closest point for point clouds.  Local space of base obj
-            co_find = imx2 @ (mx1 @ vert.co)
+            co_find = imx2 @ (mx1 @ vert.co)  #MATRIX MULTIPLICATINO EVERY TIME?
 
             #closest surface point for triangle mesh
             #this is set up for a  well modeled aligning object with
             #with a noisy or scanned base object
-            if bversion() <= '002.076.00':
-                #co1, normal, face_index = base_obj.closest_point_on_mesh(co_find)
-                co1, n, face_index, d = base_bvh.find(co_find)
-            else:
-                #res, co1, normal, face_index = base_obj.closest_point_on_mesh(co_find)
-                co1, n, face_index, d = base_bvh.find_nearest(co_find)
+           
+            #res, co1, normal, face_index = base_obj.closest_point_on_mesh(co_find)
+            co1, n, face_index, dist = base_bvh.find_nearest(co_find)
 
-            dist = (mx2 @ co_find - mx2 @ co1).length
+            #dist = (mx2 @ co_find - mx2 @ co1).length #RAUL  this distance filter can be appplied array wise and used to create a numpy mask so we only pass verts needed to A, B
             #d is now returned by bvh.find
             #dist = mx2.to_scale() * d
             if face_index != -1 and dist < thresh:
                 verts1.append(vert.co)
-                verts2.append(imx1 @ (mx2 @ co1))
+                verts2.append(imx1 @ (mx2 @ co1))  #ANOTHER MATRIX MULTIPLICATION PER VER PER ITERATION NO!
                 if calc_stats:
                     dists.append(dist)
 
+
+        pair_find_time = time.time()
+        print('    Took %f seconds to bvh find pairs' % (pair_find_time - sample_time))
         #later we will pre-process data to get nice data sets
         #eg...closest points after initial guess within a certain threshold
         #for now, take the verts and make them a numpy array
+        
+        
+        
         A = np.zeros(shape=[3,len(verts1)])
         B = np.zeros(shape=[3,len(verts1)])
 
@@ -313,4 +320,91 @@ def make_pairs(align_obj, base_obj, base_bvh, vlist, thresh, sample = 0, calc_st
             d_stats = [avg_dist, dev]
         else:
             d_stats = None
+            
+            
+        numpy_rebuild = time.time()
+        print('    Took %f seconds  to put verst back into numpy list' % (numpy_rebuild - pair_find_time))
+        return A, B, d_stats
+    
+    
+def make_pairs_kd(align_obj, base_obj, base_kd, vlist, thresh, sample = 0, calc_stats = False):
+    '''
+    vlist is a list of vertex indices in the align object to use
+    for alignment.  Will be in align_obj local space!
+    '''
+    mx1 = align_obj.matrix_world
+    mx2 = base_obj.matrix_world
+
+    imx1 = mx1.inverted()
+    imx2 = mx2.inverted()
+
+    verts1 = []
+    verts2 = []
+    if calc_stats:
+        dists = []
+
+    #RAUL  we are sampling on every iteration!
+    start = time.time()
+    #downsample if needed
+    if sample > 1:
+        vlist = vlist[0::sample]
+    sample_time = time.time()
+    print('    Took %f seconds to downsample' % (sample_time - start))
+
+    if thresh > 0: #THIS MAKES NO SENSE, WHEN WOULD WE EVER NOT DO THIS
+        #filter data based on an initial starting dist
+        #eacg time in the routine..the limit should go down
+        for vert_ind in vlist:
+
+            vert = align_obj.data.vertices[vert_ind]
+            #closest point for point clouds.  Local space of base obj
+            co_find = imx2 @ (mx1 @ vert.co)  #MATRIX MULTIPLICATINO EVERY TIME?
+
+            #closest surface point for triangle mesh
+            #this is set up for a  well modeled aligning object with
+            #with a noisy or scanned base object
+           
+            #res, co1, normal, face_index = base_obj.closest_point_on_mesh(co_find)
+            co1, face_index, dist = base_kd.find(co_find)
+
+            #dist = (mx2 @ co_find - mx2 @ co1).length #RAUL  this distance filter can be appplied array wise and used to create a numpy mask so we only pass verts needed to A, B
+            #THIS IS DOUBLE STUPID BECAUE KD RETURNS THE dist for us!
+            
+            #d is now returned by bvh.find
+            #dist = mx2.to_scale() * d
+            if face_index != -1 and dist < thresh:
+                verts1.append(vert.co)
+                verts2.append(imx1 @ (mx2 @ co1))  #ANOTHER MATRIX MULTIPLICATION PER VER PER ITERATION NO!
+                if calc_stats:
+                    dists.append(dist)
+
+
+        pair_find_time = time.time()
+        print('    Took %f seconds to kd find pairs' % (pair_find_time - sample_time))
+        #later we will pre-process data to get nice data sets
+        #eg...closest points after initial guess within a certain threshold
+        #for now, take the verts and make them a numpy array
+        
+        
+        
+        A = np.zeros(shape=[3,len(verts1)])
+        B = np.zeros(shape=[3,len(verts1)])
+
+        for i in range(0,len(verts1)):
+            V1 = verts1[i]
+            V2 = verts2[i]
+
+            A[0][i], A[1][i], A[2][i] = V1[0], V1[1], V1[2]
+            B[0][i], B[1][i], B[2][i] = V2[0], V2[1], V2[2]
+
+        if calc_stats:
+            avg_dist = np.mean(dists)
+            dev = np.std(dists)
+            d_stats = [avg_dist, dev]
+        else:
+            d_stats = None
+            
+            
+        numpy_rebuild = time.time()
+        print('    Took %f seconds  to put verst back into numpy list' % (numpy_rebuild - pair_find_time))
         return A, B, d_stats

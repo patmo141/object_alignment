@@ -85,6 +85,10 @@ class VIEW3D_PT_object_alignment(Panel):
         row.prop(settings, "align_meth")
 
         row = layout.row()
+        row.prop(settings, "snap_method")
+        
+        
+        row = layout.row()
         row.label(text="Iterative Alignment")
         row = layout.row()
         row.operator("object.align_icp")

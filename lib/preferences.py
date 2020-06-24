@@ -67,6 +67,13 @@ class ObjectAlignmentPreferences(AddonPreferences):
         align_items.append((str(index), align_methods[index], str(index)))
     align_meth = EnumProperty(items = align_items, name="Alignment Method", description="Changes how picked points registration aligns object", default='0', options={'ANIMATABLE'}, update=None, get=None, set=None)
 
+    
+    snap_method = EnumProperty(items = [('BVH', 'BVH', 'BVH'), ('KD','KD','KD'), ('OB','OB','OB')], 
+                               name="Snap Method", 
+                               description="Changes paris are made", 
+                               default='BVH', options={'ANIMATABLE'}, update=None, get=None, set=None)
+
+
 	# addon updater preferences
     auto_check_update = BoolProperty(
         name="Auto-check for Update",

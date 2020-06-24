@@ -25,12 +25,13 @@ import bpy
 from bpy.types import Operator
 from mathutils import Matrix
 from mathutils.bvhtree import BVHTree
+from mathutils.kdtree import KDTree
 
 # Addon imports
 from ..functions import *
 
 class OBJECT_OT_icp_align(Operator):
-    """Uses ICP alignment to iteratevely aligne two objects"""
+    """Uses ICP alignment to iteratively align two objects"""
     bl_idname = "object.align_icp"
     bl_label = "ICP Align"
     bl_options = {'REGISTER', 'UNDO'}
@@ -45,15 +46,46 @@ class OBJECT_OT_icp_align(Operator):
         return condition_1 and condition_1
 
     def execute(self, context):
+        
+        
+        
+        
+        #NEW MASTER STRATEGY
+        
+        #Check size of base model
+        #Check size of align model
+        #Cheick for filtering/exclusion/inclusion
+        
+        #Decide how much downsamlpling/upsampling to do on each mesh
+        
+        #build align vco numpy list or v.co list?
+        
+        #make sure to use MSD filtering per iteration
+        #numpy mask?
+        
+        
+        
+        
+        
         settings = get_addon_preferences()
         align_meth = settings.align_meth
         start = time.time()
         align_obj = context.object
         base_obj = [obj for obj in context.selected_objects if obj != align_obj][0]
         base_bvh = BVHTree.FromObject(base_obj, context.evaluated_depsgraph_get())
+        
+        
+        base_kd = KDTree(len(base_obj.data.vertices))
+        for i in range(0, len(base_obj.data.vertices)):
+            base_kd.insert(base_obj.data.vertices[i].co, i)
+        base_kd.balance()
+        
+        
         align_obj.rotation_mode = 'QUATERNION'
 
+       
         vlist = []
+        #https://blender.stackexchange.com/questions/75223/finding-vertices-in-a-vertex-group-using-blenders-python-api/75240#75240
         #figure out if we need to do any inclusion/exclusion
         group_lookup = {g.name: g.index for g in align_obj.vertex_groups}
         if 'icp_include' in align_obj.vertex_groups:
@@ -79,12 +111,14 @@ class OBJECT_OT_icp_align(Operator):
         else:
             vlist = [v.index for v in align_obj.data.vertices]
 
+        print('vlist is %i verts' % len(vlist))
         settings = get_addon_preferences()
         thresh = settings.min_start
         sample = settings.sample_fraction
         iters = settings.icp_iterations
         target_d = settings.target_d
         use_target = settings.use_target
+        snap_mode = settings.snap_method
         factor = round(1/sample)
 
         n = 0
@@ -93,16 +127,26 @@ class OBJECT_OT_icp_align(Operator):
         conv_r_list = [None] * 5
 
         while n < iters  and not converged:
+            iter_start = time.time()
 
+            if snap_mode == 'BVH':
+                (A, B, d_stats) = make_pairs(align_obj, base_obj, base_bvh, vlist, thresh, factor, calc_stats = use_target)
+            else:
+                (A, B, d_stats) = make_pairs_kd(align_obj, base_obj, base_kd, vlist, thresh, factor, calc_stats = use_target)
 
-            (A, B, d_stats) = make_pairs(align_obj, base_obj, base_bvh, vlist, thresh, factor, calc_stats = use_target)
-
-
+            pair_time = time.time()
+            print('Made pairs in %f seconds' % (pair_time-iter_start))
+            
+            
             if align_meth == '0': #rigid transform
                 M = affine_matrix_from_points(A, B, shear=False, scale=False, usesvd=True)
             elif align_meth == '1': # rot, loc, scale
                 M = affine_matrix_from_points(A, B, shear=False, scale=True, usesvd=True)
 
+            affine_time = time.time()
+            print('Affine matrix tooth %f seconds' % (affine_time - pair_time))
+            
+            
             new_mat = Matrix.Identity(4)
             for y in range(0,4):
                 for z in range(0,4):
