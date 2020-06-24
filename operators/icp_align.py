@@ -72,7 +72,16 @@ class OBJECT_OT_icp_align(Operator):
         start = time.time()
         align_obj = context.object
         base_obj = [obj for obj in context.selected_objects if obj != align_obj][0]
-        base_bvh = BVHTree.FromObject(base_obj, context.evaluated_depsgraph_get())
+        
+        #get the bvh in local coords, yay
+        bme = bmesh.new()
+        bme.from_mesh(base_obj.data)
+        mx = align_obj.matrix_world.inverted() @ base_obj.matrix_world
+        bme.transform(mx)
+        
+        #base_bvh = BVHTree.FromObject(base_obj, context.evaluated_depsgraph_get())
+        base_bvh = BVHTree.FromBMesh(bme)
+        bme.free()
         
         
         base_kd = KDTree(len(base_obj.data.vertices))
@@ -126,6 +135,10 @@ class OBJECT_OT_icp_align(Operator):
         conv_t_list = [target_d * 2] * 5  #store last 5 translations
         conv_r_list = [None] * 5
 
+        original_mx = align_obj.matrix_world
+        matrix_change = Matrix.Identity(4)
+        
+        iters_start = time.time()
         while n < iters  and not converged:
             iter_start = time.time()
 
@@ -152,7 +165,11 @@ class OBJECT_OT_icp_align(Operator):
                 for z in range(0,4):
                     new_mat[y][z] = M[y][z]
 
-            align_obj.matrix_world = align_obj.matrix_world @ new_mat
+            #align_obj.matrix_world = align_obj.matrix_world @ new_mat
+            
+            align_obj.data.transform(new_mat)
+            matrix_change = new_mat @ matrix_change
+            
             trans = new_mat.to_translation()
             quat = new_mat.to_quaternion()
 
@@ -177,6 +194,11 @@ class OBJECT_OT_icp_align(Operator):
 
             n += 1
         time_taken = time.time() - start
+        iters_time = time.time() - iters_start
+        print('Tok %f secds for %i iters' % (iters_time, n))
+        print('Average time per iter %f: ' % (iters_time/n))
+        
+        
         if use_target and not converged:
             print('Maxed out iterations')
             print('Final Translation: %f ' % conv_t_list[i])

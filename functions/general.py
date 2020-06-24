@@ -277,7 +277,7 @@ def make_pairs(align_obj, base_obj, base_bvh, vlist, thresh, sample = 0, calc_st
 
             vert = align_obj.data.vertices[vert_ind]
             #closest point for point clouds.  Local space of base obj
-            co_find = imx2 @ (mx1 @ vert.co)  #MATRIX MULTIPLICATINO EVERY TIME?
+            co_find = vert.co
 
             #closest surface point for triangle mesh
             #this is set up for a  well modeled aligning object with
@@ -291,7 +291,7 @@ def make_pairs(align_obj, base_obj, base_bvh, vlist, thresh, sample = 0, calc_st
             #dist = mx2.to_scale() * d
             if face_index != -1 and dist < thresh:
                 verts1.append(vert.co)
-                verts2.append(imx1 @ (mx2 @ co1))  #ANOTHER MATRIX MULTIPLICATION PER VER PER ITERATION NO!
+                verts2.append(co1)  #ANOTHER MATRIX MULTIPLICATION PER VER PER ITERATION NO!
                 if calc_stats:
                     dists.append(dist)
 
@@ -358,7 +358,7 @@ def make_pairs_kd(align_obj, base_obj, base_kd, vlist, thresh, sample = 0, calc_
 
             vert = align_obj.data.vertices[vert_ind]
             #closest point for point clouds.  Local space of base obj
-            co_find = imx2 @ (mx1 @ vert.co)  #MATRIX MULTIPLICATINO EVERY TIME?
+            co_find = vert.co  
 
             #closest surface point for triangle mesh
             #this is set up for a  well modeled aligning object with
@@ -373,10 +373,10 @@ def make_pairs_kd(align_obj, base_obj, base_kd, vlist, thresh, sample = 0, calc_
             #d is now returned by bvh.find
             #dist = mx2.to_scale() * d
             if face_index != -1 and dist < thresh:
-                verts1.append(vert.co)
-                verts2.append(imx1 @ (mx2 @ co1))  #ANOTHER MATRIX MULTIPLICATION PER VER PER ITERATION NO!
+                verts1.append(vert.co)  #TODO REMOVE APPEND
+                verts2.append(co1)  #OH MY GOD APPEND :-(  #ANOTHER MATRIX MULTIPLICATION PER VER PER ITERATION NO!
                 if calc_stats:
-                    dists.append(dist)
+                    dists.append(dist)  #AND ANOTHER APPEND :-(
 
 
         pair_find_time = time.time()
