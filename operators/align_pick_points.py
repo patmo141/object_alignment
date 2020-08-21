@@ -242,20 +242,23 @@ class OBJECT_OT_align_pick_points(Operator):
 
         elif event.type == 'RET':
 
-            if len(self.align_points) >= 3 and len(self.base_points) >= 3 and len(self.align_points) == len(self.base_points):
-                bpy.types.SpaceView3D.draw_handler_remove(self._2Dhandle, 'WINDOW')
-                bpy.types.SpaceView3D.draw_handler_remove(self._3Dhandle, 'WINDOW')
-                self.de_localize(context)
-                self.align_obj(context)
-
-                context.view_layer.objects.active = self.obj_align
-                self.obj_align.select_set(True)
-                self.obj_base = True
-
-                return {'FINISHED'}
+            self.end_commit()
+            return {'FINISHED'}
 
         return {'RUNNING_MODAL'}
 
+    def get_objects(self, context):
+        obj_align_name = context.object.name
+        obj_base_name = [obj for obj in context.selected_objects if obj != context.object][0].name
+        
+        #I did this stupid method becuase I was unsure
+        #if some things were being "sticky" and not
+        #remembering where they were
+        obj_align = bpy.data.objects[obj_align_name]
+        obj_base = bpy.data.objects[obj_base_name]
+        
+        return obj_align, obj_base
+    
     def invoke(self, context, event):
         self.modal_state = 'WAITING'
 
@@ -271,19 +274,11 @@ class OBJECT_OT_align_pick_points(Operator):
         self.align_msg = 'Select 3 or more points'
 
 
-        obj1_name = context.object.name
-        obj2_name = [obj for obj in context.selected_objects if obj != context.object][0].name
-
         for ob in context.scene.objects:
             ob.select_set(False)
 
         bpy.context.view_layer.objects.active= None#context.scene.objects.active = None
 
-        #I did this stupid method becuase I was unsure
-        #if some things were being "sticky" and not
-        #remembering where they were
-        obj1 = bpy.data.objects[obj1_name]
-        obj2 = bpy.data.objects[obj2_name]
 
         for ob in bpy.data.objects:
             if ob.select_set(True):
@@ -305,9 +300,12 @@ class OBJECT_OT_align_pick_points(Operator):
         #bpy.ops.view3d.toolshelf() #close the 2nd toolshelf
         
 
-        bpy.context.view_layer.objects.active = obj1
-        obj1.select_set(True)
-        obj2.select_set(False)
+        obj_align, obj_base = self.get_objects(context)
+        
+        
+        bpy.context.view_layer.objects.active = obj_align
+        obj_align.select_set(True)
+        obj_base.select_set(False)
 
         bpy.ops.view3d.localview(override)
         
@@ -322,7 +320,7 @@ class OBJECT_OT_align_pick_points(Operator):
 
 
 
-        obj1.select_set(False)
+        obj_align.select_set(False)
         bpy.context.view_layer.objects.active = None
         override = context.copy()
         for area in screen.areas:
@@ -330,18 +328,18 @@ class OBJECT_OT_align_pick_points(Operator):
                 override['area'] = area
                 self.area_base = area
                 bpy.ops.object.select_all(action = 'DESELECT')
-                bpy.context.view_layer.objects.active = obj2
-                obj2.select_set(True)
-                override['selected_objects'] = [obj2]
-                override['selected_editable_objects'] = [obj2]
-                override['object'] = obj2
-                override['active_object'] = obj2
+                bpy.context.view_layer.objects.active = obj_base
+                obj_base.select_set(True)
+                override['selected_objects'] = [obj_base]
+                override['selected_editable_objects'] = [obj_base]
+                override['object'] = obj_base
+                override['active_object'] = obj_base
                 bpy.ops.view3d.localview(override)
                 break
 
 
-        self.obj_align = obj1
-        self.obj_base = obj2
+        self.obj_align = obj_align
+        self.obj_base = obj_base
 
         #hooray, we will raycast in local view!
         self.align_points = []
@@ -362,13 +360,30 @@ class OBJECT_OT_align_pick_points(Operator):
     # class methods
 
     
+    def end_commit(self):
+        context = bpy.context  #responsible for getting it yourself
+        if len(self.align_points) >= 3 and len(self.base_points) >= 3 and len(self.align_points) == len(self.base_points):
+            bpy.types.SpaceView3D.draw_handler_remove(self._2Dhandle, 'WINDOW')
+            bpy.types.SpaceView3D.draw_handler_remove(self._3Dhandle, 'WINDOW')
+            self.de_localize(context)
+            self.align_obj(context)
+
+            context.view_layer.objects.active = self.obj_align
+            self.obj_align.select_set(True)
+            self.obj_base = True
+
+            self.end_commit_post()  #chance to something else (eg, launch a new operator!)
+    
+    def end_commit_post():
+        pass
+    
+    
     def create_batch_base(self):
         verts = [self.obj_align.matrix_world @ p for p in self.base_points]
         vertices = [(v.x, v.y, v.z) for v in verts]    
         self.base_shader = gpu.shader.from_builtin('3D_UNIFORM_COLOR')
         self.base_batch = batch_for_shader(self.base_shader, 'POINTS', {"pos":vertices})
-        
-        
+         
     def create_batch_align(self):
         verts = [self.obj_align.matrix_world @ p for p in self.align_points]
         vertices = [(v.x, v.y, v.z) for v in verts]      
