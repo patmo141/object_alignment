@@ -17,6 +17,7 @@
 # System imports
 import math
 import numpy as np
+import time
 
 # Blender imports
 # NONE!
@@ -246,6 +247,13 @@ def rigid_transform_3D(A, B):
 
     return R, t
 
+
+#we should use more numpy multiplication fns where possible
+#https://stackoverflow.com/questions/38372194/python-numpy-apply-rotation-matrix-to-each-line-in-array
+#https://blenderartists.org/t/multiply-4x4-matrix-and-array-of-3d-vectors-using-numpy/1158289
+
+
+
 def make_pairs(align_obj, base_obj, base_bvh, vlist, thresh, sample = 0, calc_stats = False):
     '''
     vlist is a list of vertex indices in the align object to use
@@ -270,10 +278,13 @@ def make_pairs(align_obj, base_obj, base_bvh, vlist, thresh, sample = 0, calc_st
         #filter data based on an initial starting dist
         #eacg time in the routine..the limit should go down
         for vert_ind in vlist:
+            
+            vert_time = time.time()
 
-            vert = align_obj.data.vertices[vert_ind]
+            vert = align_obj.data.vertices[vert_ind]  #RAUL, this is bad, referencing the vertex every time
+            
             #closest point for point clouds.  Local space of base obj
-            co_find = imx2 * (mx1 * vert.co)
+            co_find = imx2 @ (mx1 @ vert.co)   #matrix multiplication every vert, every iteration :-(
 
             #closest surface point for triangle mesh
             #this is set up for a  well modeled aligning object with
@@ -285,26 +296,28 @@ def make_pairs(align_obj, base_obj, base_bvh, vlist, thresh, sample = 0, calc_st
                 #res, co1, normal, face_index = base_obj.closest_point_on_mesh(co_find)
                 co1, n, face_index, d = base_bvh.find_nearest(co_find)
 
-            dist = (mx2 * co_find - mx2 * co1).length
+            dist = (mx2 @ co_find - mx2 @ co1).length
             #d is now returned by bvh.find
             #dist = mx2.to_scale() * d
             if face_index != -1 and dist < thresh:
                 verts1.append(vert.co)
-                verts2.append(imx1 * (mx2 * co1))
+                verts2.append(imx1 @ (mx2 @ co1))
                 if calc_stats:
                     dists.append(dist)
 
+            vert_Finish = time.time()
+            print('Takes about %f seconds per vert' % (vert_Finish - vert_time))
         #later we will pre-process data to get nice data sets
         #eg...closest points after initial guess within a certain threshold
         #for now, take the verts and make them a numpy array
         A = np.zeros(shape=[3,len(verts1)])
         B = np.zeros(shape=[3,len(verts1)])
 
-        for i in range(0,len(verts1)):
+        for i in range(0,len(verts1)):  #RAUL  Here we are looping over another list of verts.  Terrible
             V1 = verts1[i]
             V2 = verts2[i]
 
-            A[0][i], A[1][i], A[2][i] = V1[0], V1[1], V1[2]
+            A[0][i], A[1][i], A[2][i] = V1[0], V1[1], V1[2]  #AND ITEM WISE ASSIGNING  from the vectors :-(
             B[0][i], B[1][i], B[2][i] = V2[0], V2[1], V2[2]
 
         if calc_stats:

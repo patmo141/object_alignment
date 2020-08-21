@@ -46,7 +46,7 @@ class OBJECT_OT_icp_align_feedback(Operator):
 
     def invoke(self,context, event):
         wm = context.window_manager
-        self._timer = wm.event_timer_add(0.01, context.window)
+        self._timer = wm.event_timer_add(time_step = 0.01, window = context.window)
         wm.modal_handler_add(self)
 
         settings = get_addon_preferences()
@@ -54,7 +54,7 @@ class OBJECT_OT_icp_align_feedback(Operator):
         self.start = time.time()
         self.align_obj = context.object
         self.base_obj = [obj for obj in context.selected_objects if obj != self.align_obj][0]
-        self.base_bvh = BVHTree.FromObject(self.base_obj, context.scene)
+        self.base_bvh = BVHTree.FromObject(self.base_obj,  context.evaluated_depsgraph_get())
         self.align_obj.rotation_mode = 'QUATERNION'
 
         self.vlist = []
@@ -132,7 +132,7 @@ class OBJECT_OT_icp_align_feedback(Operator):
         start = time.time()
         align_obj = context.object
         base_obj = [obj for obj in context.selected_objects if obj != align_obj][0]
-        base_bvh = BVHTree.FromObject(base_obj, context.scene)
+        base_bvh = BVHTree.FromObject(base_obj,  context.evaluated_depsgraph_get())
         align_obj.rotation_mode = 'QUATERNION'
 
         vlist = []
@@ -190,12 +190,13 @@ class OBJECT_OT_icp_align_feedback(Operator):
                 for z in range(0,4):
                     new_mat[y][z] = M[y][z]
 
-            align_obj.matrix_world = align_obj.matrix_world * new_mat
+            align_obj.matrix_world = align_obj.matrix_world @ new_mat
             trans = new_mat.to_translation()
             quat = new_mat.to_quaternion()
 
             align_obj.update_tag()
-            context.scene.update()
+            #context.scene.update()
+            context.view_layer.update()
 
             if d_stats:
                 i = int(fmod(n,5))
@@ -252,7 +253,7 @@ class OBJECT_OT_icp_align_feedback(Operator):
             for z in range(0,4):
                 new_mat[y][z] = M[y][z]
 
-        self.align_obj.matrix_world = self.align_obj.matrix_world * new_mat
+        self.align_obj.matrix_world = self.align_obj.matrix_world @ new_mat
         trans = new_mat.to_translation()
         quat = new_mat.to_quaternion()
 

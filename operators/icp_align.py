@@ -50,7 +50,7 @@ class OBJECT_OT_icp_align(Operator):
         start = time.time()
         align_obj = context.object
         base_obj = [obj for obj in context.selected_objects if obj != align_obj][0]
-        base_bvh = BVHTree.FromObject(base_obj, context.scene)
+        base_bvh = BVHTree.FromObject(base_obj, context.evaluated_depsgraph_get())
         align_obj.rotation_mode = 'QUATERNION'
 
         vlist = []
@@ -93,27 +93,37 @@ class OBJECT_OT_icp_align(Operator):
         conv_r_list = [None] * 5
 
         while n < iters  and not converged:
-
-
+            
+            iter_start = time.time()
+            
+            
             (A, B, d_stats) = make_pairs(align_obj, base_obj, base_bvh, vlist, thresh, factor, calc_stats = use_target)
 
+            pair_time = time.time()
+            print('Made pairs in %f seconds' % (iter_start - pair_time))
 
             if align_meth == '0': #rigid transform
                 M = affine_matrix_from_points(A, B, shear=False, scale=False, usesvd=True)
             elif align_meth == '1': # rot, loc, scale
                 M = affine_matrix_from_points(A, B, shear=False, scale=True, usesvd=True)
 
+            affine_time = time.time()
+            print('Affine matrix tooth %f seconds' % (affine_time - pair_time))
+            
+            
+            #TODO stupid way to transpose a matrix?  What the hell
             new_mat = Matrix.Identity(4)
             for y in range(0,4):
                 for z in range(0,4):
                     new_mat[y][z] = M[y][z]
 
-            align_obj.matrix_world = align_obj.matrix_world * new_mat
+            align_obj.matrix_world = align_obj.matrix_world @ new_mat
             trans = new_mat.to_translation()
             quat = new_mat.to_quaternion()
 
             align_obj.update_tag()
-            context.scene.update()
+            context.view_layer.update()
+            #context.scene.update()
 
             if d_stats:
                 i = int(fmod(n,5))
