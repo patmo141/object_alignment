@@ -246,7 +246,7 @@ def rigid_transform_3D(A, B):
 
     return R, t
 
-def make_pairs(align_obj, base_obj, base_bvh, vlist, thresh, sample = 0, calc_stats = False):
+def make_pairs(align_obj, base_obj, base_bvh, vlist, thresh, calc_stats = False):
     '''
     vlist is a list of vertex indices in the align object to use
     for alignment.  Will be in align_obj local space!
@@ -264,12 +264,10 @@ def make_pairs(align_obj, base_obj, base_bvh, vlist, thresh, sample = 0, calc_st
 
     #RAUL  we are sampling on every iteration!
     start = time.time()
-    #downsample if needed
-    if sample > 1:
-        vlist = vlist[0::sample]
+    
     sample_time = time.time()
     print('    Took %f seconds to downsample' % (sample_time - start))
-
+    print('    iterating %i verts' % len(vlist))
     if thresh > 0: #THIS MAKES NO SENSE, WHEN WOULD WE EVER NOT DO THIS
         #filter data based on an initial starting dist
         #eacg time in the routine..the limit should go down
@@ -323,11 +321,11 @@ def make_pairs(align_obj, base_obj, base_bvh, vlist, thresh, sample = 0, calc_st
             
             
         numpy_rebuild = time.time()
-        print('    Took %f seconds  to put verst back into numpy list' % (numpy_rebuild - pair_find_time))
+        print('    Took %f seconds  to put verts back into numpy list' % (numpy_rebuild - pair_find_time))
         return A, B, d_stats
     
     
-def make_pairs_kd(align_obj, base_obj, base_kd, vlist, thresh, sample = 0, calc_stats = False):
+def make_pairs_kd(align_obj, base_obj, base_kd, vlist, thresh, calc_stats = False):
     '''
     vlist is a list of vertex indices in the align object to use
     for alignment.  Will be in align_obj local space!
@@ -345,11 +343,6 @@ def make_pairs_kd(align_obj, base_obj, base_kd, vlist, thresh, sample = 0, calc_
 
     #RAUL  we are sampling on every iteration!
     start = time.time()
-    #downsample if needed
-    if sample > 1:
-        vlist = vlist[0::sample]
-    sample_time = time.time()
-    print('    Took %f seconds to downsample' % (sample_time - start))
 
     if thresh > 0: #THIS MAKES NO SENSE, WHEN WOULD WE EVER NOT DO THIS
         #filter data based on an initial starting dist

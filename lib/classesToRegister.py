@@ -30,4 +30,5 @@ classes = [
     OBJECT_OT_align_exclude_clear,
     OBJECT_OT_align_pick_points,
     VIEW3D_PT_object_alignment,
+    OBJECT_OT_icp_align_feedback_custom
 ]
