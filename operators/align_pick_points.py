@@ -420,6 +420,7 @@ class OBJECT_OT_align_pick_points(Operator):
         #test new method
         settings = get_addon_preferences()
         align_meth = settings.align_meth
+        take_m_with = settings.take_m_with
 
         if align_meth == '0': #rigid transform
             M = affine_matrix_from_points(A, B, shear=False, scale=False, usesvd=True)
@@ -437,6 +438,13 @@ class OBJECT_OT_align_pick_points(Operator):
         #because we calced transform in local space
         #it's this easy to update the obj...
         self.obj_align.matrix_world = self.obj_align.matrix_world @ new_mat
+        print(f"Final Transformation Matrix is: {new_mat}")
+        if take_m_with == True:
+            for obj in bpy.context.scene.objects:
+                if obj.name[:2] == "m_":
+                    obj.matrix_world = obj.matrix_world @ new_mat
+                    obj.update_tag()
+
 
         self.obj_align.update_tag()
         context.view_layer.update()

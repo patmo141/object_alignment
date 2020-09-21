@@ -76,6 +76,11 @@ class VIEW3D_PT_object_alignment(Panel):
         row.operator("object.align_exclude_clear", icon="X", text="")
 
         row = layout.row()
+        row.label(text="General Alignment")
+        row = layout.row()
+        row.prop(settings, "take_m_with")
+
+        row = layout.row()
         row.label(text="Initial Alignment")
         row = layout.row()
         row.operator("object.align_picked_points")
