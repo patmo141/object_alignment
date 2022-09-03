@@ -1,6 +1,7 @@
 # 'Object Alignment':
 
-Iterative closest point alignment addon for Blender, Slight update from patmo's repo so that it works for Blender 3.2.2
+Iterative closest point alignment addon for Blender 
+Small update from patmo's repo so that it works for Blender 3.2.2
 
 # Instructions for Use:
 
