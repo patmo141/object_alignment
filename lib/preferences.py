@@ -28,64 +28,68 @@ class ObjectAlignmentPreferences(AddonPreferences):
     bl_idname = __package__[:__package__.index(".lib")]
 
     # Addon preferences
-    icp_iterations = IntProperty(
+    icp_iterations : IntProperty(
             name="ICP Iterations",
             default=50)
-    redraw_frequency = IntProperty(
+    redraw_frequency : IntProperty(
             name="Redraw Iterations",
             description="Number of iterations between redraw, bigger = less redraw but faster completion",
             default=10)
-    use_sample = BoolProperty(
+    use_sample : BoolProperty(
             name="Use Sample",
             description="Use a sample of verts to align",
             default=False)
-    sample_fraction = FloatProperty(
+    sample_fraction : FloatProperty(
             name="Sample Fraction",
             description="Only fraction of mesh verts for alignment. Less accurate, faster",
             default=0.5,
             min=0,
             max=1)
-    min_start = FloatProperty(
+    min_start : FloatProperty(
             name="Minimum Starting Dist",
             description="Only verts closer than this distance will be used in each iteration",
             default=0.5,
             min=0,
             max=20)
-    target_d = FloatProperty(
+    target_d : FloatProperty(
             name="Target Translation",
             description="If translation of 3 iterations is < target, ICP is considered sucessful",
             default=0.01,
             min=0,
             max=10)
-    use_target = BoolProperty(
+    use_target : BoolProperty(
             name="Use Target",
             description="Calc alignment stats at each iteration to assess convergence. SLower per step, may result in less steps",
             default=True)
+    take_m_with : BoolProperty(
+            name="Take m_ Objects with",
+            description="Applies the same Transformation Matrix to all Objects which start with 'm_'",
+            default=False)
     align_methods =['RIGID','ROT_LOC_SCALE']#,'AFFINE']
     align_items = []
     for index, item in enumerate(align_methods):
         align_items.append((str(index), align_methods[index], str(index)))
-    align_meth = EnumProperty(items = align_items, name="Alignment Method", description="Changes how picked points registration aligns object", default='0', options={'ANIMATABLE'}, update=None, get=None, set=None)
+    align_meth : EnumProperty(items = align_items, name="Alignment Method", description="Changes how picked points registration aligns object", default='0', options={'ANIMATABLE'}, update=None, get=None, set=None)
 
 	# addon updater preferences
-    auto_check_update = BoolProperty(
+    auto_check_update : BoolProperty(
         name="Auto-check for Update",
         description="If enabled, auto-check for updates using an interval",
         default=False)
-    updater_intrval_months = IntProperty(
+    updater_intrval_months : IntProperty(
         name='Months',
         description="Number of months between checking for updates",
         default=0, min=0)
-    updater_intrval_days = IntProperty(
+    updater_intrval_days : IntProperty(
         name='Days',
         description="Number of days between checking for updates",
         default=7, min=0)
-    updater_intrval_hours = IntProperty(
+    updater_intrval_hours : IntProperty(
         name='Hours',
         description="Number of hours between checking for updates",
         min=0, max=23,
         default=0)
-    updater_intrval_minutes = IntProperty(
+    updater_intrval_minutes : IntProperty(
         name='Minutes',
         description="Number of minutes between checking for updates",
         min=0, max=59,
@@ -104,6 +108,7 @@ class ObjectAlignmentPreferences(AddonPreferences):
         layout.prop(self, "use_target")
         layout.prop(self, "target_d")
         layout.prop(self, "align_meth")
+        layout.prop(self, "take_m_with")
 
         # updater draw function
         addon_updater_ops.update_settings_ui(self,context)

@@ -19,8 +19,6 @@
 import math
 
 # Blender imports
-import bpy
-from bpy.app.handlers import persistent
 
 # Addon imports
 from ..functions import *

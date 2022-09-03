@@ -23,7 +23,6 @@ from math import *
 # Blender imports
 import bpy
 import bmesh
-from mathutils import Vector, Euler, Matrix
 from bpy.types import Object, Scene#, CollectionProperty
 try:
     from bpy.types import ViewLayer
