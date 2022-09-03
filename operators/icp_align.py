@@ -41,8 +41,8 @@ class OBJECT_OT_icp_align(Operator):
     @classmethod
     def poll(cls, context):
         condition_1 = len(context.selected_objects) == 2
-        conidion_2 = context.object.type == 'MESH'
-        return condition_1 and condition_1
+        condition_2 = context.object.type == 'MESH'
+        return condition_1 and condition_2
 
     def execute(self, context):
         settings = get_addon_preferences()
@@ -85,6 +85,7 @@ class OBJECT_OT_icp_align(Operator):
         iters = settings.icp_iterations
         target_d = settings.target_d
         use_target = settings.use_target
+        take_m_with = settings.take_m_with
         factor = round(1/sample)
 
         n = 0
@@ -118,6 +119,13 @@ class OBJECT_OT_icp_align(Operator):
                     new_mat[y][z] = M[y][z]
 
             align_obj.matrix_world = align_obj.matrix_world @ new_mat
+            print(f"Final Transformation Matrix is: {new_mat}")
+            if take_m_with == True:
+                for obj in bpy.context.scene.objects:
+                    if obj.name[:2] == "m_":
+                        obj.matrix_world = obj.matrix_world @ new_mat
+                        obj.update_tag()
+
             trans = new_mat.to_translation()
             quat = new_mat.to_quaternion()
 
