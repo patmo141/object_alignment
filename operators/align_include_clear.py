@@ -19,7 +19,6 @@
 # NONE!
 
 # Blender imports
-import bpy
 from bpy.types import Operator
 
 # Addon imports

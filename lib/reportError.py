@@ -22,7 +22,6 @@ import os
 # Blender imports
 import bpy
 import addon_utils
-from bpy.props import StringProperty
 
 # Addon imports
 from ..functions import *

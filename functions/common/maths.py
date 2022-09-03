@@ -19,7 +19,7 @@
 # NONE!
 
 # Blender imports
-from mathutils import Matrix, Vector
+from mathutils import Vector
 
 # Module imports
 from .wrappers import blender_version_wrapper

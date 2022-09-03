@@ -19,7 +19,6 @@
 import math
 
 # Blender imports
-import bpy
 from mathutils import Matrix
 
 

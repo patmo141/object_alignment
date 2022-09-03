@@ -18,8 +18,8 @@
 bl_info = {
     "name": "Object Alignment",
     "author": "Patrick Moore & Christopher Gearhart",
-    "version": (0, 2, 0),
-    "blender": (2, 80, 0),
+    "version": (0, 3, 0),
+    "blender": (3, 2, 2),
     "location": "View3D > UI > Alignment",
     "description": "Help align objects which have overlapping features",
     "warning": "",
@@ -32,7 +32,6 @@ bl_info = {
 
 # Blender imports
 import bpy
-from bpy.types import Scene, Object
 
 # Addon imports
 from .operators import *
