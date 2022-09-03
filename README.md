@@ -11,7 +11,7 @@ Update so that it works for Blender 3.2.2
 
 * Manually place the two meshes close together
 * Select the base object first then the object to be aligned second and click on ICP Align
-* Increase the number of ICP iterations or just ICP Align multiple times until the tow meshes are well aligned
+* Increase the number of ICP iterations or just ICP Align multiple times until the two meshes are well aligned
 
 ### Take m_Objects with:
 This option allows to apply the same transformation matrix, when applying ICP Align to one object, to all other objects with names that start with "m_".
