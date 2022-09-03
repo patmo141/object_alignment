@@ -17,7 +17,7 @@
 
 bl_info = {
     "name": "Object Alignment",
-    "author": "Patrick Moore & Christopher Gearhart",
+    "author": "Patrick Moore, Christopher Gearhart & Alexandre Cavaleri",
     "version": (0, 3, 0),
     "blender": (3, 2, 2),
     "location": "View3D > UI > Alignment",
